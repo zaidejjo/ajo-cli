@@ -1,5 +1,7 @@
-"""ajo-cli - Professional Django scaffolding tool."""
+"""AJO - Professional Django Scaffolder"""
 
-__version__ = "0.1.0"
-__author__ = "AJO CLI Authors"
+__version__ = "2.0.0"
+__author__ = "Zaid Ajo"
 __license__ = "MIT"
+
+from ajo.cli import main

@@ -1,27 +1,60 @@
-# ⚡ AJO CLI
+# 🚀 AJO - Professional Django Scaffolder
 
-[![PyPI version](https://badge.fury.io/py/ajo-cli.svg)](https://badge.fury.io/py/ajo-cli)
-[![Python Versions](https://img.shields.io/pypi/pyversions/ajo-cli.svg)](https://pypi.org/project/ajo-cli/)
+[![PyPI version](https://img.shields.io/pypi/v/ajo.svg)](https://pypi.org/project/ajo/)
+[![Python Version](https://img.shields.io/pypi/pyversions/ajo.svg)](https://python.org)
+[![AUR Version](https://img.shields.io/aur/version/ajo)](https://aur.archlinux.org/packages/ajo)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **The Ultimate Interactive CLI Scaffolding Tool for Django Projects**  
-> _Like `create-react-app`, but for Django_
+> **AJO** (Advanced Java Orchestrator) - The ultimate Django project generator with Cyberpunk TUI
 
 ## ✨ Features
 
 - 🚀 **Lightning Fast** - Powered by `uv` package manager
-- 🎨 **Beautiful UI** - Interactive prompts with Rich and InquirerPy
-- 📦 **Two Architecture Presets** - Monolith or REST API ready
-- 🔒 **Security First** - Auto-generates secure `.env` with secret keys
-- 📱 **App Scaffolding** - Create multiple Django apps with proper structure
-- 🎯 **Bootstrap 5 Ready** - Global templates with Bootstrap CDN
-- 🛡️ **Error Recovery** - Automatic rollback on failure
-- 🌍 **Cross-Platform** - Works on Linux, macOS, and Windows
+- 🎨 **Stunning TUI** - Cyberpunk theme with Nerd Font icons
+- 🗄️ **Multi-Database** - SQLite, PostgreSQL, MySQL support
+- 🐙 **GitHub Integration** - Auto-create repos and push
+- 🔄 **CI/CD Ready** - GitHub Actions with Ruff linter
+- 📦 **Multiple Apps** - Create unlimited Django apps
+- 🔒 **Security First** - Auto .env with SECRET_KEY
 
 ## 📦 Installation
 
-### Using pip (recommended)
+### Option 1: pip (Any OS)
 
 ```bash
-pip install ajo-cli
+# Install globally
+pip install ajo
+
+# Or with uv (recommended)
+uv tool install ajo
 ```
+
+### Option 2: AUR (Arch linux)
+
+```bash
+# Install globally
+yay -S ajo
+
+# Using paru
+paru -S ajo
+
+```
+
+
+
+
+# Create new Django project
+ajo
+
+# Inside Django project, run smart commands
+ajo
+# Then choose from: runserver, makemigrations, migrate, etc.
+
+
+
+# completions/ajo.bash
+_ajo_completion() {
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=($(compgen -W "help version" -- $cur))
+}
+complete -F _ajo_completion ajo

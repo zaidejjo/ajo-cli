@@ -8,7 +8,13 @@ import os
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TimeElapsedColumn,
+)
 
 from ajo.utils import generate_secure_key, rollback_project, append_to_installed_apps
 from ajo.exceptions import CommandExecutionError
@@ -52,7 +58,9 @@ class DjangoProjectScaffolder:
         self.settings_path: Optional[Path] = None
         self.project_package_path: Optional[Path] = None
 
-    def _run_command(self, command: list[str], description: str, cwd: Optional[Path] = None) -> str:
+    def _run_command(
+        self, command: list[str], description: str, cwd: Optional[Path] = None
+    ) -> str:
         """Run a subprocess command with professional progress spinner."""
         cwd_path = cwd or self.root_path
 
@@ -94,17 +102,23 @@ class DjangoProjectScaffolder:
         deps = ["django", "python-dotenv"]
 
         if self.preset == "REST API Ready":
-            deps.extend(["djangorestframework", "django-cors-headers", "drf-spectacular"])
+            deps.extend(
+                ["djangorestframework", "django-cors-headers", "drf-spectacular"]
+            )
 
         console.print(f"[bold cyan]📦 Installing {len(deps)} packages...[/bold cyan]")
         self._run_command(["uv", "add"] + deps, f"Installing {', '.join(deps)}")
-        console.print(f"[bold green]✓[/bold green] Packages installed: {', '.join(deps)}")
+        console.print(
+            f"[bold green]✓[/bold green] Packages installed: {', '.join(deps)}"
+        )
 
     def _install_database_packages(self):
         """Install database-specific packages."""
         if self.db_type == "postgresql":
             console.print("[cyan]🐘 Installing PostgreSQL driver...[/cyan]")
-            self._run_command(["uv", "add", "psycopg2-binary"], "Installing psycopg2-binary")
+            self._run_command(
+                ["uv", "add", "psycopg2-binary"], "Installing psycopg2-binary"
+            )
             console.print("[bold green]✓[/bold green] PostgreSQL driver installed")
         elif self.db_type == "mysql":
             console.print("[cyan]🦬 Installing MySQL driver...[/cyan]")
@@ -184,7 +198,7 @@ DATABASES = {{
         env_content = f"""# ============================================================
 # DJANGO SECURITY
 # ============================================================
-SECRET_KEY='{secret_key}'
+SECRET_KEY={secret_key}
 DEBUG=True
 ALLOWED_HOSTS=127.0.0.1,localhost
 
@@ -462,7 +476,9 @@ uv.lock
                 )
                 return False
 
-            console.print(f"\n[bold cyan]🚀 Creating project: {self.project_name}[/bold cyan]\n")
+            console.print(
+                f"\n[bold cyan]🚀 Creating project: {self.project_name}[/bold cyan]\n"
+            )
 
             # Step 1: Create directory
             console.print("[yellow]📁 Creating project directory...[/yellow]")
