@@ -22,21 +22,23 @@
 ### Option 1: pip (Any OS)
 
 ```bash
-# Install globally
-pip install ajo
+# with pipx (recommended)
+pipx install ajo-cli
 
+# whith pip
+pip install ajo-cli
 # Or with uv (recommended)
-uv tool install ajo
+uv tool install ajo-cli
 ```
 
 ### Option 2: AUR (Arch linux)
 
 ```bash
 # Install globally
-yay -S ajo
+yay -S ajo-cli
 
 # Using paru
-paru -S ajo
+paru -S ajo-cli
 
 ```
 
