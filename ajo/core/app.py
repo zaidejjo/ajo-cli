@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import signal
+import nest_asyncio
 from collections.abc import Callable, Coroutine
 from typing import TypeVar
 
@@ -41,6 +42,9 @@ def async_entry(
 
     @functools.wraps(func)
     def wrapper(*args: object, **kwargs: object) -> R:
+        # Allow nested event loops (required for InquirerPy/prompt_toolkit)
+        nest_asyncio.apply()
+
         # Register a simple handler so KeyboardInterrupt surfaces
         # cleanly through asyncio.run().
         loop = asyncio.new_event_loop()
