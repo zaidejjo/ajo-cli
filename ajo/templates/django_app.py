@@ -17,7 +17,7 @@ from rich.progress import (
 )
 
 from ajo.utils import generate_secure_key, rollback_project, append_to_installed_apps
-from ajo.exceptions import CommandExecutionError
+from ajo.core.exceptions import CommandExecutionError
 
 console = Console()
 

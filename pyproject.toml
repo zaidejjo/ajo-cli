@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ajo-cli"
-version = "2.0.0"
+version = "3.0.0"
 description = "Professional Django scaffolder with Cyberpunk TUI"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "zaidejjo", email = "zaidejjodev@gmail.com"}
 ]
@@ -16,16 +16,15 @@ maintainers = [
 ]
 keywords = ["django", "scaffolding", "cli", "tui", "cyberpunk"]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Environment :: Console",
-    "Topic :: Software Development :: Code Generators",
+     "Development Status :: 4 - Beta",
+     "Intended Audience :: Developers",
+     "Programming Language :: Python :: 3",
+     "Programming Language :: Python :: 3.10",
+     "Programming Language :: Python :: 3.11",
+     "Programming Language :: Python :: 3.12",
+     "Programming Language :: Python :: 3.13",
+     "Environment :: Console",
+     "Topic :: Software Development :: Code Generators",
 ]
 
 requires-python = ">=3.10"
@@ -47,3 +46,8 @@ Issues = "https://github.com/zaidejjo/ajo-cli/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ajo*"]
+
+[tool.uv.workspace]
+members = [
+    "zaid",
+]
