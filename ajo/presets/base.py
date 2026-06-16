@@ -79,6 +79,24 @@ class AbstractPreset(ABC):
 
     # ── Abstract methods ─────────────────────────────────────────────────
 
+    @property
+    def preview_files(self) -> list[tuple[str, int]]:
+        """Optional list of ``(relative_path, byte_size)`` tuples describing
+        files that will be created by this preset.
+
+        Used by :class:`~ajo.ui.theme.FileTreePreview` to render a live
+        structural blueprint before scaffolding begins.
+
+        The base implementation returns an empty list.  Subclasses that
+        generate known files should override this to return a faithful
+        representation of the output they produce.
+
+        Returns:
+            List of ``(path, size)`` tuples, where *path* is relative to
+            the project root.  Directories have size ``0``.
+        """
+        return []
+
     @abstractmethod
     async def scaffold(
         self,

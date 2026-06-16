@@ -1,13 +1,17 @@
-"""Nerd Font icons and color theme constants for the ajo-cli TUI.
+"""Nerd Font icons, theme palette constants, and theme variant enum for ajo-cli TUI.
 
 This module contains only pure data — no external dependencies, no logic.
 The :class:`NF` class provides Nerd Font icon codepoints for every UI element.
 The :class:`Theme` class defines the cyberpunk neon color palette.
+The :class:`ThemeVariant` enum lists all available visual themes.
 
 These constants are consumed by ``ajo/ui/theme.py`` for Rich/InquirerPy styling
 and by UI functions throughout the codebase.
 """
 
+from __future__ import annotations
+
+from enum import Enum, auto
 from typing import Final
 
 
@@ -110,6 +114,25 @@ class NF:
     STATUS_STOPPED: Final[str] = "\uf015b"  # 󰅛
 
 
+class ThemeVariant(Enum):
+    """Available visual themes for the ajo-cli TUI."""
+
+    CYBERPUNK = auto()
+    DRACULA = auto()
+    MONOCHROMATIC = auto()
+
+    @classmethod
+    def from_string(cls, value: str) -> ThemeVariant:
+        """Parse a theme name (case-insensitive)."""
+        mapping = {
+            "cyberpunk": cls.CYBERPUNK,
+            "dracula": cls.DRACULA,
+            "monochromatic": cls.MONOCHROMATIC,
+            "mono": cls.MONOCHROMATIC,
+        }
+        return mapping.get(value.strip().lower(), cls.CYBERPUNK)
+
+
 class Theme:
     """Cyberpunk neon colour palette.
 
@@ -131,21 +154,21 @@ class Theme:
 
 
 # =============================================================================
-# Nerd Font fallback resolution
+# Nerd Font fallback resolution (deprecated — use TerminalDetector directly)
 # =============================================================================
-# If the terminal does not render Nerd Font codepoints, swap every NF
-# attribute with a safe Unicode / emoji fallback at import time.
-# This happens once so that all consumers of NF.* see the resolved value.
+# This block is kept for backward compatibility.  New code should call
+# ``ajo.ui.capabilities.icon(name)`` or ``TerminalDetector.icon(name, caps)``
+# instead.
 
 try:
-    from ajo.ui.capabilities import detect_nerd_font_support, get_icon_fallback
+    from ajo.ui.capabilities import has_nerd_fonts, icon
 
-    if not detect_nerd_font_support():
+    if not has_nerd_fonts():
         for _attr in dir(NF):
             if _attr.startswith("_"):
                 continue
-            _fallback = get_icon_fallback(_attr)
-            if _fallback:
+            _fallback = icon(_attr.lower())
+            if _fallback and _fallback != _attr:
                 setattr(NF, _attr, _fallback)
 except Exception:
     pass  # Best-effort — keep Nerd Font codepoints if anything goes wrong

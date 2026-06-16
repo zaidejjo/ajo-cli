@@ -5,6 +5,12 @@ pipeline — directory creation, ``git`` initialisation, dependency
 installation, preset-specific scaffolding — and wraps every step with
 :class:`RollbackManager` so that any failure (exception or
 :exc:`KeyboardInterrupt`) triggers a clean, LIFO-ordered teardown.
+
+Progress integration
+--------------------
+High-latency steps (``uv add``, ``uv sync``) use
+:class:`~ajo.ui.progress.AsyncProgressManager` to render live,
+non-blocking progress bars with streaming subprocess output.
 """
 
 from __future__ import annotations
@@ -18,6 +24,7 @@ from types import FrameType
 from typing import Any, Callable
 
 from ajo.core.exceptions import PresetError, RollbackError
+from ajo.ui.progress import AsyncProgressManager, run_command_streaming
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +121,7 @@ class ScaffoldEngine:
         self.env_config = env_config or {}
         self._rollback = RollbackManager()
         self._interrupted = False
+        self._preset: Any | None = None
 
         # Populate defaults if not provided
         self.env_config.setdefault("project_name", project_path.name)
@@ -180,6 +188,7 @@ class ScaffoldEngine:
         )
 
         if preset is not None:
+            self._preset = preset  # store for preview
             scaffold_fn = getattr(preset, "scaffold", None)
             if scaffold_fn is not None:
                 steps.append(
@@ -343,29 +352,53 @@ class ScaffoldEngine:
         self._rollback.push("undo uv init", _undo_uv_init)
 
     async def _step_uv_add(self, packages: list[str]) -> None:
-        """Install runtime dependencies."""
-        from ajo.gateway.uv import uv_add
+        """Install runtime dependencies with live progress."""
+        from ajo.core.exceptions import CommandExecutionError
 
         if not packages:
             return
         try:
-            await uv_add(packages, self.project_path)
-        except Exception as exc:
+            async with AsyncProgressManager() as _pm:
+                _task_id = _pm.add_task(
+                    f"Installing {' '.join(packages)}",
+                    total=100,
+                )
+                _returncode, _output = await run_command_streaming(
+                    ["uv", "add", *packages],
+                    task_id=_task_id,
+                    progress_manager=_pm,
+                    description_prefix="uv add",
+                )
+                if _returncode != 0:
+                    raise PresetError(
+                        f"uv add {' '.join(packages)} failed (exit {_returncode})"
+                    )
+        except CommandExecutionError as exc:
             raise PresetError(f"uv add {' '.join(packages)} failed: {exc}") from exc
 
     async def _step_uv_add_dev(self, packages: list[str]) -> None:
-        """Install dev dependencies with ``uv add --dev``."""
-        from ajo.gateway.utils import _run_command
+        """Install dev dependencies with live progress."""
+        from ajo.core.exceptions import CommandExecutionError
 
         if not packages:
             return
         try:
-            await _run_command(
-                ["uv", "add", "--dev", *packages],
-                cwd=self.project_path,
-                description=f"uv add --dev {' '.join(packages)}",
-            )
-        except Exception as exc:
+            async with AsyncProgressManager() as _pm:
+                _task_id = _pm.add_task(
+                    f"Installing dev {' '.join(packages)}",
+                    total=100,
+                )
+                _returncode, _output = await run_command_streaming(
+                    ["uv", "add", "--dev", *packages],
+                    task_id=_task_id,
+                    progress_manager=_pm,
+                    description_prefix="uv add --dev",
+                )
+                if _returncode != 0:
+                    raise PresetError(
+                        f"uv add --dev {' '.join(packages)} failed (exit {_returncode})"
+                    )
+        except CommandExecutionError as exc:
             raise PresetError(
                 f"uv add --dev {' '.join(packages)} failed: {exc}"
             ) from exc
@@ -413,13 +446,66 @@ class ScaffoldEngine:
         self._rollback.push(f"undo {preset.name} preset", _undo_preset)
 
     async def _step_uv_sync(self) -> None:
-        """Run ``uv sync`` to lock the environment."""
-        from ajo.gateway.uv import uv_run
+        """Run ``uv sync`` to lock the environment with live progress."""
+        from ajo.core.exceptions import CommandExecutionError
 
         try:
-            await uv_run(["sync"], self.project_path, timeout=120)
-        except Exception as exc:
+            async with AsyncProgressManager() as _pm:
+                _task_id = _pm.add_task(
+                    "Locking environment (uv sync)",
+                    total=100,
+                )
+                _returncode, _output = await run_command_streaming(
+                    ["uv", "sync"],
+                    task_id=_task_id,
+                    progress_manager=_pm,
+                    description_prefix="uv sync",
+                )
+                if _returncode != 0:
+                    raise PresetError(f"uv sync failed (exit {_returncode})")
+        except CommandExecutionError as exc:
             raise PresetError(f"uv sync failed: {exc}") from exc
+
+    # ── Preview support ──────────────────────────────────────────────────
+
+    def get_preview_files(self) -> list[tuple[str, int]]:
+        """Return a list of ``(relative_path, byte_size)`` for files and
+        directories that will be created by the scaffold.
+
+        This is used by :class:`~ajo.ui.theme.FileTreePreview` to render
+        a live preview before the user confirms scaffolding.
+
+        Returns:
+            List of ``(path, size)`` tuples.  Directories have size ``0``.
+        """
+        files: list[tuple[str, int]] = []
+        project_name = self.env_config.get("project_name", self.project_path.name)
+
+        # Core files always created
+        core_files: list[tuple[str, int]] = [
+            (f"{project_name}/", 0),
+            (f"{project_name}/.env", 512),
+            (f"{project_name}/.gitignore", 256),
+            (f"{project_name}/pyproject.toml", 1024),
+        ]
+
+        # Preset-specific files — we look at what the preset might generate
+        preset = getattr(self, "_preset", None)
+        if preset is not None:
+            preset_files = getattr(preset, "preview_files", None)
+            if preset_files is not None:
+                core_files.extend(
+                    (f"{project_name}/{path}", size) for path, size in preset_files
+                )
+
+        # De-duplicate (keep first occurrence)
+        seen: set[str] = set()
+        for path, size in core_files:
+            if path not in seen:
+                seen.add(path)
+                files.append((path, size))
+
+        return files
 
     # ── Utility ──────────────────────────────────────────────────────────
 

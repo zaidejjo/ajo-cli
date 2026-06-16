@@ -42,6 +42,20 @@ class GraphQLPreset(AbstractPreset):
     def dev_dependencies(self) -> list[str]:
         return ["ruff"]
 
+    @property
+    def preview_files(self) -> list[tuple[str, int]]:
+        # Includes all monolith files plus GraphQL-specific additions
+        return [
+            ("manage.py", 2048),
+            ("__init__.py", 64),
+            ("settings.py", 4864),  # larger — includes GRAPHENE config
+            ("urls.py", 768),  # includes GraphQL route
+            ("wsgi.py", 256),
+            ("asgi.py", 256),
+            ("schema.py", 2048),  # auto-generated Graphene schema
+            ("templates/base.html", 2048),
+        ]
+
     async def scaffold(
         self,
         project_path: Path,

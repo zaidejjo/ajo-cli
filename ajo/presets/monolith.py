@@ -40,6 +40,18 @@ class MonolithPreset(AbstractPreset):
     def dev_dependencies(self) -> list[str]:
         return ["ruff"]
 
+    @property
+    def preview_files(self) -> list[tuple[str, int]]:
+        return [
+            ("manage.py", 2048),
+            ("__init__.py", 64),  # project package (/project_name/)
+            ("settings.py", 4096),
+            ("urls.py", 512),
+            ("wsgi.py", 256),
+            ("asgi.py", 256),
+            ("templates/base.html", 2048),
+        ]
+
     async def scaffold(
         self,
         project_path: Path,

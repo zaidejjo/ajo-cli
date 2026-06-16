@@ -6,6 +6,8 @@
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import re
@@ -13,96 +15,222 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-# =============================================================================
-# THIRD-PARTY IMPORTS
-# =============================================================================
+# ── Lightweight stdlib / local imports only at module level ─────────────────
+# Rich and InquirerPy are loaded lazily via proxies below so that
+# ``import ajo.cli`` stays under 50ms.  See ``LazyImportTracker``.
 
-try:
-    from InquirerPy import inquirer
-    from InquirerPy.base.control import Choice
-    from InquirerPy.separator import Separator
-    from InquirerPy.validator import ValidationError, Validator
-except ImportError:
-    print("❌ InquirerPy not installed. Run: uv pip install InquirerPy")
-    sys.exit(1)
+from ajo.core.lazy_imports import LazyImportTracker, lazy_attr
 
-try:
-    from rich.console import Console
-    from rich.live import Live
-    from rich.panel import Panel
-    from rich.spinner import Spinner
-    from rich.table import Table
-    from rich.text import Text
-    from rich.progress import (
-        Progress,
-        SpinnerColumn,
-        TextColumn,
-        BarColumn,
-        TimeElapsedColumn,
-    )
-    from rich import box
-    from rich.align import Align
-    from rich.rule import Rule
-except ImportError:
-    print("❌ Rich not installed. Run: uv pip install rich")
-    sys.exit(1)
-
-# Local imports
+# Local imports (stdlib-only or very lightweight)
 from ajo import __version__
 from ajo.core.app import async_entry
-from ajo.core.constants import NF, Theme
+from ajo.core.constants import NF, Theme, ThemeVariant
 from ajo.core.exceptions import AjoError, PresetError
-from ajo.detector import DjangoProjectDetector, SmartDjangoCLI, SmartCommand
-from ajo.detector.prereqs import check_uv_installed
-from ajo.presets import get_preset, list_presets
-from ajo.scaffolding import ScaffoldEngine
-from ajo.templates.django_app import DjangoProjectScaffolder
-from ajo.ui.theme import (
-    INQUIRER_STYLE,
-    command_urgency_style,
-    migration_label,
-    ruff_label,
-    server_label,
-    state_label,
-    venv_label,
-)
-from ajo.validators import ProjectNameValidator
-
-# Global console
-console = Console()
-
 
 # =============================================================================
-# CUSTOM VALIDATORS
+# LAZY PROXIES — Rich & InquirerPy loaded on first use
 # =============================================================================
+# We keep the same module-level names (``console``, ``inquirer``, ``Panel``,
+# etc.) so that every function in this file continues to work unchanged.
+# The proxies delay ``import rich`` / ``import InquirerPy`` until they are
+# actually accessed.
+
+_all_loaded: bool = False
 
 
-class AppNameValidator(Validator):
-    """Django app name validation."""
+def _ensure_rich_imported() -> None:
+    """One-shot import of all Rich and InquirerPy names used in this module.
 
-    PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
-    RESERVED = {"django", "test", "tests", "site", "admin", "config", "settings"}
+    Called automatically by every lazy proxy below before the first real
+    attribute access.  After the first call all subsequent accesses are
+    direct (no proxy overhead)."""
+    global _all_loaded
+    global inquirer, Choice, Separator, ValidationError, Validator
+    global Console, Live, Panel, Spinner
+    global Table, Text, Progress, SpinnerColumn, TextColumn
+    global BarColumn, TimeElapsedColumn, box, Align, Rule
+    global INQUIRER_STYLE, console
+    global FileTreePreview, ThemeEngine
+    global command_urgency_style, migration_label, ruff_label
+    global server_label, state_label, venv_label
+    global DjangoProjectDetector, SmartDjangoCLI, SmartCommand
+    global check_uv_installed
+    global get_preset, list_presets
+    global ScaffoldEngine
+    global DjangoProjectScaffolder
+    global ProjectNameValidator, AppNameValidator
+    global _async_entry
 
-    def validate(self, document):
-        value = document.text.strip()
+    if _all_loaded:
+        return
 
-        if not value:
-            raise ValidationError("App name cannot be empty")
+    # Rich
+    RichConsole = lazy_attr("rich.console", "Console")
+    Live = lazy_attr("rich.live", "Live")
+    Panel = lazy_attr("rich.panel", "Panel")
+    Spinner = lazy_attr("rich.spinner", "Spinner")
+    Table = lazy_attr("rich.table", "Table")
+    Text = lazy_attr("rich.text", "Text")
+    Progress = lazy_attr("rich.progress", "Progress")
+    SpinnerColumn = lazy_attr("rich.progress", "SpinnerColumn")
+    TextColumn = lazy_attr("rich.progress", "TextColumn")
+    BarColumn = lazy_attr("rich.progress", "BarColumn")
+    TimeElapsedColumn = lazy_attr("rich.progress", "TimeElapsedColumn")
+    box = lazy_attr("rich", "box")
+    Align = lazy_attr("rich.align", "Align")
+    Rule = lazy_attr("rich.rule", "Rule")
 
-        if len(value) < 2:
-            raise ValidationError("App name must be at least 2 characters")
+    # InquirerPy
+    import InquirerPy.inquirer as inquirer
 
-        if not self.PATTERN.match(value):
-            raise ValidationError(
-                "Use only letters and underscores. Must start with a letter."
-            )
+    Choice = lazy_attr("InquirerPy.base.control", "Choice")
+    Separator = lazy_attr("InquirerPy.separator", "Separator")
+    ValidationError = lazy_attr("InquirerPy.validator", "ValidationError")
+    Validator = lazy_attr("InquirerPy.validator", "Validator")
 
-        if value.lower() in self.RESERVED:
-            raise ValidationError(f"'{value}' is a reserved Django app name")
+    # Local (trigger theme / engine imports)
+    from ajo.ui.theme import (
+        INQUIRER_STYLE as _IS,
+        FileTreePreview as _FTP,
+        ThemeEngine as _TE,
+        command_urgency_style as _cus,
+        migration_label as _ml,
+        ruff_label as _rl,
+        server_label as _sl,
+        state_label as _sl2,
+        venv_label as _vl,
+    )
 
-        return True
+    INQUIRER_STYLE = _IS
+    FileTreePreview = _FTP
+    ThemeEngine = _TE
+    command_urgency_style = _cus
+    migration_label = _ml
+    ruff_label = _rl
+    server_label = _sl
+    state_label = _sl2
+    venv_label = _vl
+
+    from ajo.detector import DjangoProjectDetector as _DPD, SmartDjangoCLI as _SDC
+    from ajo.detector.prereqs import check_uv_installed as _cui
+    from ajo.presets import get_preset as _gp, list_presets as _lp
+    from ajo.scaffolding import ScaffoldEngine as _SE
+    from ajo.templates.django_app import DjangoProjectScaffolder as _DPS
+    from ajo.validators import ProjectNameValidator as _PNV
+
+    DjangoProjectDetector = _DPD
+    SmartDjangoCLI = _SDC
+    check_uv_installed = _cui
+    get_preset = _gp
+    list_presets = _lp
+    ScaffoldEngine = _SE
+    DjangoProjectScaffolder = _DPS
+    ProjectNameValidator = _PNV
+
+    # ── AppNameValidator (depends on InquirerPy Validator) ─────────
+    class _AppNameValidator(Validator):  # type: ignore[valid-type]
+        """Django app name validation."""
+
+        PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+        RESERVED = {"django", "test", "tests", "site", "admin", "config", "settings"}
+
+        def validate(self, document: Any) -> bool:  # type: ignore[override]
+            value = document.text.strip()
+
+            if not value:
+                raise ValidationError("App name cannot be empty")
+
+            if len(value) < 2:
+                raise ValidationError("App name must be at least 2 characters")
+
+            if not self.PATTERN.match(value):
+                raise ValidationError(
+                    "Use only letters and underscores. Must start with a letter."
+                )
+
+            if value.lower() in self.RESERVED:
+                raise ValidationError(f"'{value}' is a reserved Django app name")
+
+            return True
+
+    global AppNameValidator
+    AppNameValidator = _AppNameValidator
+
+    # Global console
+    console = RichConsole()
+    _all_loaded = True
+
+
+# ── Module-level replacements that trigger lazy loading ──────────────────
+
+
+class _LazyConsole:
+    """Proxy that calls ``_ensure_rich_imported()`` on first attribute access.
+
+    This lets us keep ``console.print(...)`` syntax unchanged.
+    """
+
+    _instance: Any = None
+
+    def __getattr__(self, name: str) -> Any:
+        if self._instance is None:
+            _ensure_rich_imported()
+            # After _ensure_rich_imported, the module-level ``console`` is
+            # replaced, so this proxy should never be called again.
+            # But just in case, delegate to the real console:
+            import sys as _sys
+
+            mod = _sys.modules[__name__]
+            self._instance = getattr(mod, "console", None)
+            if self._instance is None or self._instance is self:
+                raise RuntimeError("Lazy console not initialised")
+        return getattr(self._instance, name)
+
+
+# Module-level names initialised to lazy proxies.
+# After ``_ensure_rich_imported()`` these are overwritten with real objects.
+console: Any = _LazyConsole()
+inquirer: Any = None
+Choice: Any = None
+Separator: Any = None
+ValidationError: Any = None
+Validator: Any = None
+
+Console: Any = None
+Live: Any = None
+Panel: Any = None
+Spinner: Any = None
+Table: Any = None
+Text: Any = None
+Progress: Any = None
+SpinnerColumn: Any = None
+TextColumn: Any = None
+BarColumn: Any = None
+TimeElapsedColumn: Any = None
+box: Any = None
+Align: Any = None
+Rule: Any = None
+
+INQUIRER_STYLE: Any = None
+FileTreePreview: Any = None
+ThemeEngine: Any = None
+command_urgency_style: Any = None
+migration_label: Any = None
+ruff_label: Any = None
+server_label: Any = None
+state_label: Any = None
+venv_label: Any = None
+
+DjangoProjectDetector: Any = None
+SmartDjangoCLI: Any = None
+check_uv_installed: Any = None
+get_preset: Any = None
+list_presets: Any = None
+ScaffoldEngine: Any = None
+DjangoProjectScaffolder: Any = None
+ProjectNameValidator: Any = None
 
 
 # =============================================================================
@@ -782,6 +910,75 @@ async def show_dashboard(detector: DjangoProjectDetector) -> bool:
 
 
 # =============================================================================
+# DIAGNOSTIC DASHBOARD
+# =============================================================================
+
+
+async def show_diagnostics(detector: DjangoProjectDetector) -> None:
+    """Run the self-healing diagnostic engine and display issues.
+
+    Uses :class:`~ajo.validators.DiagnosticEngine` to scan the project
+    for common misconfigurations.  For each discoverable issue the user
+    is offered an **Auto-Fix** option.
+
+    Args:
+        detector: An initialised :class:`DjangoProjectDetector` whose
+            ``path`` attribute points to the project root.
+    """
+    # Lazy import for startup performance
+    from ajo.validators import DiagnosticEngine
+
+    engine = DiagnosticEngine(detector.path)
+    issues = engine.run_full_diagnostic()
+
+    if not issues:
+        show_success("System Healthy", "No issues detected")
+        return
+
+    console.print()
+    print_rule(f"Diagnostics ({len(issues)} issue{'s' if len(issues) != 1 else ''})")
+    console.print()
+
+    for i, issue in enumerate(issues, 1):
+        icon = (
+            NF.ERROR
+            if issue.severity == "error"
+            else (NF.WARNING if issue.severity == "warning" else NF.INFO)
+        )
+        color = (
+            Theme.ERROR
+            if issue.severity == "error"
+            else (Theme.WARNING if issue.severity == "warning" else Theme.PRIMARY)
+        )
+        label = issue.severity.upper()
+
+        console.print(f"  {i:2d}. {icon}  [{color}][{label}][/]  {issue.message}")
+
+        if issue.auto_fix and issue.fix_description:
+            from InquirerPy import inquirer as _diag_inquirer
+
+            fix = _diag_inquirer.confirm(
+                message=f"     Auto-fix: {issue.fix_description}?",
+                default=True,
+                style=INQUIRER_STYLE,
+            ).execute()
+
+            if fix:
+                success = issue.auto_fix()
+                if success:
+                    show_success("Fixed", issue.fix_description)
+                else:
+                    show_error("Fix Failed", f"Could not {issue.fix_description}")
+
+    console.print()
+    show_info(
+        "Diagnostics Complete",
+        f"Resolved {sum(1 for i in issues if i.auto_fix)} issue(s). "
+        f"Run diagnostics again to re-check.",
+    )
+
+
+# =============================================================================
 # SMART COMMANDS
 # =============================================================================
 
@@ -1161,6 +1358,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path.cwd(),
         help="Parent directory for the project (default: current dir)",
     )
+    parser.add_argument(
+        "--theme",
+        type=str,
+        choices=["cyberpunk", "dracula", "monochromatic", "mono"],
+        default="cyberpunk",
+        help="Visual theme (default: cyberpunk)",
+    )
     return parser
 
 
@@ -1301,9 +1505,17 @@ def _parse_args() -> argparse.Namespace | int | None:
     args = parser.parse_args()
 
     # ── Version fast-path ────────────────────────────────────────────────
+    # Use raw ``print()`` here — Rich console is NOT loaded at this point
+    # when running --version or --help, ensuring startup stays under 50ms.
     if args.version:
-        console.print(f"ajo v{__version__}")
+        print(f"ajo v{__version__}")
         return None
+
+    # ── Ensure lazy (Rich / InquirerPy) imports are loaded ──────────────
+    # From this point forward, all module-level names (console, inquirer,
+    # Panel, ThemeEngine, etc.) will have their real values.
+    # This call is idempotent and costs ~0 after the first invocation.
+    _ensure_rich_imported()
 
     # ── Headless mode validation ──────────────────────────────────────────
     if args.headless or args.yes:
@@ -1326,6 +1538,14 @@ async def _async_main() -> int:
     if isinstance(result, int):
         return result  # Validation error
     args = result
+
+    # ── Theme Engine initialisation ──────────────────────────────────────
+    engine = ThemeEngine.get_instance()
+    engine.set_theme(ThemeVariant.from_string(args.theme))
+    engine.adapt_to_depth()
+    # Rebuild INQUIRER_STYLE from the active theme
+    global INQUIRER_STYLE
+    INQUIRER_STYLE = engine.get_inquirer_style()
 
     # ── Headless / Automated Mode ────────────────────────────────────────
     if args.headless or args.yes:
@@ -1360,6 +1580,12 @@ async def _async_main() -> int:
 
             choices.append(Separator())
             choices.append(
+                Choice(
+                    value="diagnostics",
+                    name=f"  {NF.DEBUG}  Run Diagnostics (Self-Healing)",
+                )
+            )
+            choices.append(
                 Choice(value="new_project", name=f"  {NF.ROCKET}  Create New Project")
             )
             choices.append(Choice(value="exit", name=f"  {NF.ERROR}  Exit"))
@@ -1375,6 +1601,9 @@ async def _async_main() -> int:
                 return 0
             elif action == "new_project":
                 pass
+            elif action == "diagnostics":
+                await show_diagnostics(detector)
+                return 0
             else:
                 success = await run_command_async(action, Path.cwd())
                 return 0 if success else 1
@@ -1422,6 +1651,44 @@ async def _async_main() -> int:
 
         # Database
         db_type, db_config = select_database()
+
+        # ── Scaffold preview ────────────────────────────────────────────
+        from ajo.presets import get_preset as _get_preset
+
+        console.print()
+        print_rule("Scaffold Preview")
+        console.print()
+
+        _preset_key = "monolith"
+        if preset == "REST API Ready":
+            _preset_key = "rest-api"
+        _preset_cls = _get_preset(_preset_key)
+        _preset_instance = _preset_cls()
+
+        _preview_files: list[tuple[str, int]] = [
+            (f"{project_name}/", 0),
+            (f"{project_name}/.env", 512),
+            (f"{project_name}/.gitignore", 256),
+            (f"{project_name}/pyproject.toml", 1024),
+        ]
+
+        for _rel_path, _size in _preset_instance.preview_files:
+            _preview_files.append((f"{project_name}/{_rel_path}", _size))
+
+        preview = FileTreePreview()
+        tree = preview.build(_preview_files, title="Files to be created")
+        console.print(tree)
+        console.print()
+
+        confirm = inquirer.confirm(
+            message=f"  {NF.ROCKET}  Proceed with scaffold?",
+            default=True,
+            style=INQUIRER_STYLE,
+        ).execute()
+
+        if not confirm:
+            show_warning("Cancelled", "Scaffold cancelled by user")
+            return 0
 
         # Create project
         with Progress(

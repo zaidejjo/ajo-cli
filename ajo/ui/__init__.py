@@ -1,5 +1,10 @@
-"""UI components for the ajo-cli TUI."""
+"""UI components for the ajo-cli TUI.
 
-from ajo.ui.theme import INQUIRER_STYLE
+Heavy UI imports (Rich, InquirerPy) are NOT loaded at package level.
+Access them through their specific submodules (``ajo.ui.theme``, etc.),
+which themselves are lazy-loaded on first use.
+"""
 
-__all__ = ["INQUIRER_STYLE"]
+# No top-level imports — Rich / InquirerPy are loaded lazily on demand.
+
+__all__: list[str] = []
