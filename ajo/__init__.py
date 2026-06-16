@@ -1,6 +1,6 @@
 """AJO - Professional Django Scaffolder."""
 
-__version__ = "3.0.0"
+__version__ = "3.0.1"
 __author__ = "Zaid Ajo"
 __license__ = "MIT"
 
