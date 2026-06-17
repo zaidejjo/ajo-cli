@@ -1,62 +1,347 @@
-# 🚀 AJO - Professional Django Scaffolder
+<p align="center">
+  <img src="https://img.shields.io/pypi/v/ajo-cli?color=%2300f2fe&style=flat-square" alt="PyPI">
+  <img src="https://img.shields.io/pypi/pyversions/ajo-cli?color=%234facfe&style=flat-square" alt="Python">
+  <img src="https://img.shields.io/aur/version/ajo-cli?color=%23f355da&style=flat-square" alt="AUR">
+  <img src="https://img.shields.io/github/license/zaidejjo/ajo-cli?color=%2300ffcc&style=flat-square" alt="License">
+</p>
 
-[![PyPI version](https://img.shields.io/pypi/v/ajo.svg)](https://pypi.org/project/ajo/)
-[![Python Version](https://img.shields.io/pypi/pyversions/ajo.svg)](https://python.org)
-[![AUR Version](https://img.shields.io/aur/version/ajo)](https://aur.archlinux.org/packages/ajo)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<h1 align="center">AJO</h1>
+<p align="center"><em>Professional Django Scaffolder with Cyberpunk TUI</em></p>
 
-> **AJO** (Advanced Java Orchestrator) - The ultimate Django project generator with Cyberpunk TUI
+<p align="center">
+  <b>ajo</b> is an interactive CLI tool that generates production-ready Django projects
+  with a beautiful cyberpunk-themed terminal UI. Pick your architecture, database,
+  and add-on modules — ajo handles the rest.
+</p>
 
-## ✨ Features
+<p align="center">
+  <code>ajo</code> &nbsp;·&nbsp;
+  <code>ajo --headless --name myproject -p rest-api -d postgresql</code> &nbsp;·&nbsp;
+  <code>ajo --theme dracula</code>
+</p>
 
-- 🚀 **Lightning Fast** - Powered by `uv` package manager
-- 🎨 **Stunning TUI** - Cyberpunk theme with Nerd Font icons
-- 🗄️ **Multi-Database** - SQLite, PostgreSQL, MySQL support
-- 🐙 **GitHub Integration** - Auto-create repos and push
-- 🔄 **CI/CD Ready** - GitHub Actions with Ruff linter
-- 📦 **Multiple Apps** - Create unlimited Django apps
-- 🔒 **Security First** - Auto .env with SECRET_KEY
+---
 
-## 📦 Installation
+## Features
 
-### Option 1: pip (Any OS)
+| | Feature | |
+|---|---|---|
+| 🗄️ | **Multi-Database Support** — PostgreSQL, MySQL, SQLite | 🐙 |
+| **GitHub Integration** — Auto repo creation & push | 🔄 |
+| **CI/CD with Ruff** — GitHub Actions pipeline | 🔒 |
+| **.env Security** — Auto-generated secrets | 📦 |
+| **Multiple Apps** — Scaffold any number of apps | 🧪 |
+| **Testing** — pytest with coverage & factory-boy | 🐳 |
+| **Docker Support** — Dockerfile + Compose + Redis + Mailhog | 🎨 |
+| **Bootstrap 5 Themes** — Pre-built UI themes | 🛠️ |
+| **Django Shell Plus** — Enhanced shell | 🔍 |
+| **Debug Toolbar** — Dev debugging tools | 🐙 |
+
+---
+
+## Architecture Presets
+
+Choose the foundation that fits your stack:
+
+| Preset | Key | Stack |
+|---|---|---|
+| **Standard Monolith** | `monolith` | Django + Bootstrap 5 + HTMX |
+| **REST API Ready** | `rest-api` | DRF + JWT + CORS + Swagger/OpenAPI |
+| **Ninja API** | `ninja-api` | django-ninja + Pydantic + Swagger UI |
+| **GraphQL API** | `graphql-api` | Graphene + Relay + GraphiQL IDE |
+| **Docker** | `docker` | Multi-stage Dockerfile + Compose (PostgreSQL, Redis, Mailhog) |
+
+Each preset generates a complete Django project with:
+- `manage.py`, settings, URLs, WSGI/ASGI
+- `.env` with auto-generated `SECRET_KEY`
+- `.gitignore` for Django best practices
+- `pyproject.toml` with `uv` dependency management
+
+The REST API, Ninja API, and GraphQL API presets are **model-aware** — they auto-generate serializers, viewsets, routers, and API endpoints by scanning your Django models via AST analysis.
+
+---
+
+## Add-on Modules
+
+Layer optional features on top of any preset:
+
+| Add-on | Key | What it adds |
+|---|---|---|
+| **Auth & Users** | `auth` | JWT auth (SimpleJWT), custom `User` model with bio/avatar, registration, login/signup templates, preset-aware REST or Ninja endpoints |
+| **Caching & Performance** | `cache` | Redis caching (`django-redis`), DB connection pooling (`django-db-connection-pool`), `django-debug-toolbar`, demo cached view |
+| **Security Hardening** | `security` | Brute-force protection (`django-axes`), TOTP 2FA (`django-otp`), CSP headers (`django-csp`), HSTS/XSS/CSRF hardening |
+| **Testing Infrastructure** | `testing` | pytest + pytest-django, coverage (fail-under 80%), factory-boy, per-app test directories, auto-generated model factories and API tests |
+
+Select add-ons interactively with `<space>` during the scaffold flow, or pass them via `--addons`:
 
 ```bash
-# with pipx (recommended)
+ajo --addons auth cache testing
+```
+
+---
+
+## Themes
+
+AJO ships with three visual themes. Pass `--theme` to switch:
+
+```
+ajo --theme cyberpunk          # Neon cyan (default)
+ajo --theme dracula            # Dracula purple/pink
+ajo --theme monochromatic      # Clean greyscale/blue
+ajo --theme mono               # Alias for monochromatic
+```
+
+Themes are applied to both the Rich terminal output and all InquirerPy interactive prompts. Terminal colour depth (TrueColor, 256, 16) is auto-detected.
+
+---
+
+## Installation
+
+### pip / pipx (any OS)
+
+```bash
+# Recommended — isolated environment
 pipx install ajo-cli
 
-# whith pip
-pip install ajo-cli
-# Or with uv (recommended)
+# With uv (also isolated)
 uv tool install ajo-cli
+
+# With pip (global)
+pip install ajo-cli
 ```
 
-### Option 2: AUR (Arch linux)
+### AUR (Arch Linux)
 
 ```bash
-# Install globally
 yay -S ajo-cli
-
-# Using paru
 paru -S ajo-cli
-
 ```
 
+### From source
 
+```bash
+git clone https://github.com/zaidejjo/ajo-cli.git
+cd ajo-cli
+uv sync
+ajo --version
+```
 
+---
 
-# Create new Django project
+## Quickstart
+
+### Create a new Django project (interactive)
+
+```bash
 ajo
+```
 
-# Inside Django project, run smart commands
+Follow the prompts:
+1. Choose a **project name**
+2. Pick an **architecture preset** (Monolith, REST API, Ninja API, GraphQL API, Docker)
+3. Select a **database** (SQLite, PostgreSQL, MySQL)
+4. Optionally enable **add-on modules** (auth, cache, security, testing)
+5. Review the scaffold preview
+6. Confirm — ajo creates the project, installs dependencies via `uv`, initialises git, and optionally creates a GitHub repo
+
+### One-shot (headless)
+
+```bash
+ajo --headless --name myproject \
+    --preset rest-api \
+    --database postgresql \
+    --addons auth cache testing \
+    --no-github
+```
+
+Flags:
+
+| Flag | Default | Description |
+|---|---|---|
+| `-n, --name` | — | Project name |
+| `-p, --preset` | `monolith` | Architecture preset |
+| `-d, --database` | `sqlite` | Database type |
+| `-y, --yes` | — | Accept all defaults (implies `--headless`) |
+| `--addons` | — | Add-on modules (space-separated) |
+| `--no-github` | — | Skip GitHub repo creation |
+| `--no-cicd` | — | Skip CI/CD pipeline setup |
+| `--output-dir` | `.` | Parent directory for the project |
+| `--theme` | `cyberpunk` | Visual theme |
+| `--headless` | — | Non-interactive mode |
+
+### Smart CLI — manage existing Django projects
+
+Run `ajo` inside an existing Django project directory:
+
+```bash
+cd myproject
 ajo
-# Then choose from: runserver, makemigrations, migrate, etc.
+```
 
+AJO detects your Django project and presents a **context-aware menu** of commands:
 
+| Command | When it appears |
+|---|---|
+| Run Server | Always |
+| Create Superuser | When no superuser exists (highlighted as urgent) |
+| Run Tests | Always |
+| Create App | Always |
+| Django Shell | Always |
+| Make Migrations | When model changes detected (highlighted as urgent) |
+| Apply Migrations | When unapplied migrations exist (highlighted as urgent) |
+| Fix Ruff Issues | When Ruff reports problems (highlighted as urgent) |
+| Clear Cache | Always |
+| Run Diagnostics | Always — scans for misconfigurations with auto-fix |
 
-# completions/ajo.bash
-_ajo_completion() {
-    local cur=${COMP_WORDS[COMP_CWORD]}
-    COMPREPLY=($(compgen -W "help version" -- $cur))
+The smart menu also shows a **live dashboard** with project metadata, branch, virtualenv status, server status, migration state, and Ruff lint status — all updating in real time.
+
+---
+
+## Persistent Configuration
+
+On the first interactive run, AJO asks:
+
+```
+? Do you use a Nerd Font in your terminal? (y/N)
+```
+
+Your answer is saved to `~/.config/ajo/config.json`:
+
+```json
+{
+  "version": 1,
+  "nerd_fonts": true,
+  "theme": null,
+  "updated_at": "2026-06-17T12:00:00+00:00"
 }
-complete -F _ajo_completion ajo
+```
+
+- `nerd_fonts`: Controls whether Nerd Font icons or text fallbacks are used across the entire TUI
+- `theme`: Reserved for future persistent theme preference
+
+**Override precedence:**
+1. `$NERD_FONTS` environment variable
+2. Saved `config.json` value
+3. Auto-detection (terminal emulator heuristics)
+4. Default: text fallbacks
+
+---
+
+## Docker
+
+The **Docker preset** generates a production-ready container setup:
+
+```bash
+ajo --preset docker
+```
+
+Creates:
+- **Dockerfile** — Multi-stage build with uv caching, `python manage.py collectstatic`
+- **docker-compose.yml** — `web` service + PostgreSQL/MySQL + Redis + Mailhog
+- **.dockerignore** — venv, cache, git
+
+Optionally integrates with Celery worker.
+
+---
+
+## Diagnostics
+
+AJO includes a self-healing diagnostic engine that scans your Django project for common issues and offers **one-click auto-fixes**:
+
+| Check | Auto-fix |
+|---|---|
+| Missing contrib apps in `INSTALLED_APPS` | Adds them |
+| Missing `ALLOWED_HOSTS` | Appends `["*"]` |
+| Hardcoded `DEBUG=True` in production | Prompts to fix |
+| Missing or placeholder `SECRET_KEY` | Generates a secure 50-char key |
+| Missing admin URL in root URLconf | Wires `admin/` path |
+| Duplicate migration prefixes | Renames with next available number |
+
+Run diagnostics from the smart CLI menu or directly.
+
+---
+
+## Development
+
+### Setup
+
+```bash
+git clone https://github.com/zaidejjo/ajo-cli.git
+cd ajo-cli
+uv sync
+```
+
+### Run tests
+
+```bash
+# All tests
+uv run pytest
+
+# With coverage
+uv run pytest --cov=ajo
+
+# Specific file
+uv run pytest tests/test_config.py -v
+```
+
+### Project structure
+
+```
+ajo/
+├── cli.py                 # CLI parser, TUI, features, scaffold flow
+├── core/
+│   ├── config.py          # Persistent config manager (~/.config/ajo/)
+│   ├── constants.py       # NF icons (Nerd Font + fallbacks), Theme, ThemeVariant
+│   ├── app.py             # async_entry decorator
+│   └── exceptions.py      # AjoError hierarchy (5 subclasses)
+├── ui/
+│   ├── theme.py           # ThemeEngine (3 themes, colour-depth adapt), FileTreePreview
+│   ├── capabilities.py    # Terminal detection (Nerd Fonts, TrueColor, Sixel, etc.)
+│   ├── fuzzy.py           # Interactive fuzzy finder
+│   ├── keyboard.py        # Keyboard event handling
+│   └── progress.py        # Async progress manager
+├── presets/
+│   ├── monolith.py        # Standard Monolith preset
+│   ├── rest_api.py        # REST API Ready preset
+│   ├── ninja_api.py       # Ninja API preset
+│   ├── graphql_api.py     # GraphQL API preset
+│   ├── docker.py          # Docker preset
+│   └── addons/            # Auth, Cache, Security, Testing add-ons
+├── scaffolding/
+│   └── engine.py          # Transactional scaffold engine with rollback
+├── templates/
+│   └── django_app.py      # Django project file generator
+├── detector/
+│   ├── project.py         # DjangoProjectDetector (fast + slow async scans)
+│   ├── smart_cli.py       # SmartDjangoCLI (context-aware commands)
+│   ├── cache.py           # Filesystem cache with TTL
+│   └── ast_analyzer.py    # AST-based model/relationship scanner
+├── gateway/               # Async subprocess wrappers (uv, git, gh)
+└── validators.py          # Project/app name validators + DiagnosticEngine
+```
+
+---
+
+## Requirements
+
+- **Python 3.10+**
+- **uv** — the Astral Python package manager (install: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- **git** — optional, for version control
+- **GitHub CLI (`gh`)** — optional, for GitHub repo creation
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
+<p align="center">
+  <sub>Built with</sub>
+  <br>
+  <code>🐍 Python 3.10+</code> &nbsp;
+  <code>🦄 Django 5.0+</code> &nbsp;
+  <code>⚡ uv</code> &nbsp;
+  <code>🦀 Ruff</code>
+</p>
