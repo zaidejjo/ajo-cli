@@ -84,6 +84,7 @@ from ajo.presets.monolith import MonolithPreset  # noqa: E402, F811
 from ajo.presets.rest_api import RestAPIPreset  # noqa: E402, F811
 from ajo.presets.graphql_api import GraphQLPreset  # noqa: E402, F811
 from ajo.presets.docker import DockerPreset  # noqa: E402, F811
+from ajo.presets.ninja_api import NinjaAPIPreset  # noqa: E402, F811
 
 __all__ = [
     "PRESET_REGISTRY",

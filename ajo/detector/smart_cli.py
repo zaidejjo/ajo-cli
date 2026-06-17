@@ -13,15 +13,17 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ajo.detector.project import DjangoProjectDetector
 
+from ajo.core.constants import NF
+
 
 class SmartCommand:
     """A single command item produced by :class:`SmartDjangoCLI`.
 
     Attributes:
-        name: Human-readable label (e.g. ``"⚠️  Migrate (2 pending)"``).
+        name: Human-readable label (e.g. ``"Apply Migrations (2 pending)"``).
         action: Machine-actionable key (e.g. ``"migrate"``).
         description: One-line explanation for tooltip / help text.
-        icon: Single-character / emoji icon.
+        icon: Nerd Font icon codepoint.
         urgency: ``True`` if this command should be visually promoted
             (highlighted, reordered to top).
     """
@@ -65,34 +67,34 @@ class SmartDjangoCLI:
         info = self.detector.project_info
         base: list[SmartCommand] = [
             SmartCommand(
-                name="🏃 Run Server",
+                name="Run Server",
                 action="runserver",
                 description="Start development server",
-                icon="🖥️",
+                icon=NF.SERVER,
             ),
             SmartCommand(
-                name="👤 Create Superuser",
+                name="Create Superuser",
                 action="createsuperuser",
                 description="Create admin user",
-                icon="👑",
+                icon=NF.USER,
             ),
             SmartCommand(
-                name="🧪 Run Tests",
+                name="Run Tests",
                 action="test",
                 description="Run all tests",
-                icon="✅",
+                icon=NF.TEST,
             ),
             SmartCommand(
-                name="📱 Create New App",
+                name="Create App",
                 action="create_app",
                 description="Scaffold a new app",
-                icon="📦",
+                icon=NF.APP,
             ),
             SmartCommand(
-                name="🔧 Django Shell",
+                name="Django Shell",
                 action="shell",
                 description="Open Django shell",
-                icon="💻",
+                icon=NF.TERMINAL,
             ),
         ]
 
@@ -103,10 +105,10 @@ class SmartDjangoCLI:
             base = [c for c in base if c.action != "makemigrations"]
             dynamic.append(
                 SmartCommand(
-                    name="⚠️ Make Migrations (Needed!)",
+                    name="Make Migrations (needed)",
                     action="makemigrations",
-                    description="Model changes detected! Run this first",
-                    icon="⚠️",
+                    description="Model changes detected — run this first",
+                    icon=NF.MIGRATION,
                     urgency=True,
                 )
             )
@@ -116,10 +118,10 @@ class SmartDjangoCLI:
             base = [c for c in base if c.action != "migrate"]
             dynamic.append(
                 SmartCommand(
-                    name=f"⚠️  Migrate ({unapplied} pending)",
+                    name=f"Apply Migrations ({unapplied} pending)",
                     action="migrate",
                     description=f"Apply {unapplied} pending migration(s)",
-                    icon="⚠️",
+                    icon=NF.MIGRATION,
                     urgency=True,
                 )
             )
@@ -130,10 +132,10 @@ class SmartDjangoCLI:
             base = [c for c in base if c.action != "createsuperuser"]
             dynamic.append(
                 SmartCommand(
-                    name="👑  Create Superuser (Needed!)",
+                    name="Create Superuser (needed)",
                     action="createsuperuser",
                     description="No admin user found — create one now",
-                    icon="👑",
+                    icon=NF.USER,
                     urgency=True,
                 )
             )
@@ -148,10 +150,10 @@ class SmartDjangoCLI:
             base = [c for c in base if c.action != "lint_check"]
             dynamic.append(
                 SmartCommand(
-                    name=f"🦺  Fix Ruff Issues ({ruff_result.line_count})",
+                    name=f"Fix Ruff Issues ({ruff_result.line_count})",
                     action="lint_check",
                     description=f"Ruff found {ruff_result.line_count} lint violation(s)",
-                    icon="🦺",
+                    icon=NF.RUFF,
                     urgency=True,
                 )
             )
@@ -161,30 +163,30 @@ class SmartDjangoCLI:
             base.insert(
                 1,
                 SmartCommand(
-                    name="🔄 Make Migrations",
+                    name="Make Migrations",
                     action="makemigrations",
                     description="Create new migrations",
-                    icon="📝",
+                    icon=NF.MIGRATION,
                 ),
             )
         if not any(c.action == "migrate" for c in dynamic):
             base.insert(
                 2,
                 SmartCommand(
-                    name="⚙️ Migrate",
+                    name="Apply Migrations",
                     action="migrate",
                     description="Apply migrations",
-                    icon="🔄",
+                    icon=NF.MIGRATION,
                 ),
             )
 
         # ── Clear cache (always at the end) ──────────────────────────
         base.append(
             SmartCommand(
-                name="🗑️ Clear Cache",
+                name="Clear Cache",
                 action="clear_cache",
                 description="Remove __pycache__ directories",
-                icon="🗑️",
+                icon=NF.CACHE,
             ),
         )
 

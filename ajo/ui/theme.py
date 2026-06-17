@@ -270,7 +270,7 @@ class ThemeEngine:
 
     # ── InquirerPy dynamic style ─────────────────────────────────────
 
-    def get_inquirer_style(self) -> dict[str, str]:
+    def get_inquirer_style(self) -> Any:
         """Return a style dict suitable for ``InquirerPy.get_style()``.
 
         This method builds styles dynamically from the current palette so
@@ -421,15 +421,15 @@ def migration_label(needs_migrations: bool, unapplied_count: int) -> Text:
     """Build a styled migration-status label."""
     if needs_migrations:
         return Text(
-            "⚠️  Changes detected (model changes)",
+            "Changes detected",
             style=Style(bold=True, color=Theme.WARNING),
         )
     if unapplied_count > 0:
         return Text(
-            f"⚠️  {unapplied_count} pending migration{'s' if unapplied_count != 1 else ''}",
+            f"{unapplied_count} pending migration{'s' if unapplied_count != 1 else ''}",
             style=Style(bold=True, color=Theme.WARNING),
         )
-    return Text("Up to date  ✅", style=Style(bold=True, color=Theme.SUCCESS))
+    return Text("Up to date", style=Style(bold=True, color=Theme.SUCCESS))
 
 
 def ruff_label(exit_code: int | None, line_count: int) -> Text:
@@ -437,21 +437,21 @@ def ruff_label(exit_code: int | None, line_count: int) -> Text:
     if exit_code is None:
         return Text("Not available", style=Style(italic=True, color=Theme.MUTED))
     if exit_code == 0:
-        return Text("Clean  ✅", style=Style(bold=True, color=Theme.SUCCESS))
+        return Text("Clean", style=Style(bold=True, color=Theme.SUCCESS))
     return Text(
-        f"⚠️  {line_count} issue{'s' if line_count != 1 else ''} found",
+        f"{line_count} issue{'s' if line_count != 1 else ''} found",
         style=Style(bold=True, color=Theme.WARNING),
     )
 
 
 def server_label(running: bool) -> Text:
     """Build a styled server-status label."""
-    return state_label(running, active_text="Running  🟢", inactive_text="Stopped  🔴")
+    return state_label(running, active_text="Running", inactive_text="Stopped")
 
 
 def venv_label(active: bool) -> Text:
     """Build a styled virtualenv-status label."""
-    return state_label(active, active_text="Active  🔒", inactive_text="Inactive  🔓")
+    return state_label(active, active_text="Active", inactive_text="Inactive")
 
 
 def command_urgency_style(is_urgent: bool) -> str:

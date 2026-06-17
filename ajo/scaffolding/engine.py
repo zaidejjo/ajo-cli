@@ -24,6 +24,7 @@ from types import FrameType
 from typing import Any, Callable
 
 from ajo.core.exceptions import PresetError, RollbackError
+from ajo.presets.addons import AbstractAddon
 from ajo.ui.progress import AsyncProgressManager, run_command_streaming
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,7 @@ class ScaffoldEngine:
         self._rollback = RollbackManager()
         self._interrupted = False
         self._preset: Any | None = None
+        self._addons: list[AbstractAddon] | None = None
 
         # Populate defaults if not provided
         self.env_config.setdefault("project_name", project_path.name)
@@ -130,7 +132,11 @@ class ScaffoldEngine:
 
     # ── Public API ───────────────────────────────────────────────────────
 
-    async def execute(self, preset: Any | None = None) -> bool:
+    async def execute(
+        self,
+        preset: Any | None = None,
+        addons: list[AbstractAddon] | None = None,
+    ) -> bool:
         """Run the full scaffold pipeline atomically.
 
         Steps (in order):
@@ -143,7 +149,10 @@ class ScaffoldEngine:
         6. Install project dependencies from preset or defaults.
         7. Install dev-dependencies from preset.
         8. Run the **preset**'s ``scaffold()`` coroutine.
-        9. Run ``uv sync`` to lock the environment.
+        9. Install add-on dependencies (aggregated across all add-ons).
+        10. Install add-on dev-dependencies (aggregated).
+        11. Run each **add-on**'s ``apply()`` coroutine.
+        12. Run ``uv sync`` to lock the environment.
 
         If any step fails, all completed steps are rolled back.
 
@@ -151,6 +160,8 @@ class ScaffoldEngine:
             preset: An optional :class:`~ajo.presets.base.AbstractPreset`
                 instance whose ``scaffold()``, ``dependencies``, and
                 ``dev_dependencies`` will be used.
+            addons: An optional list of :class:`~ajo.presets.addons.AbstractAddon`
+                instances to layer on top of the preset.
 
         Returns:
             ``True`` if the scaffold completed successfully, ``False``
@@ -197,6 +208,36 @@ class ScaffoldEngine:
                         lambda: self._step_preset(preset),
                     )
                 )
+
+        if addons:
+            self._addons = addons  # store for preview / rollback
+            addon_deps: list[str] = []
+            addon_dev_deps: list[str] = []
+            for addon in addons:
+                addon_deps.extend(getattr(addon, "dependencies", []))
+                addon_dev_deps.extend(getattr(addon, "dev_dependencies", []))
+
+            if addon_deps:
+                steps.append(
+                    (
+                        "Installing add-on dependencies",
+                        lambda deps=addon_deps: self._step_uv_add(deps),
+                    )
+                )
+            if addon_dev_deps:
+                steps.append(
+                    (
+                        "Installing add-on dev dependencies",
+                        lambda deps=addon_dev_deps: self._step_uv_add_dev(deps),
+                    )
+                )
+
+            steps.append(
+                (
+                    "Applying add-on modules",
+                    lambda: self._step_addon(addons),
+                )
+            )
 
         steps.append(("Running uv sync", self._step_uv_sync))
 
@@ -445,6 +486,37 @@ class ScaffoldEngine:
 
         self._rollback.push(f"undo {preset.name} preset", _undo_preset)
 
+    async def _step_addon(self, addons: list[AbstractAddon]) -> None:
+        """Run each add-on's ``apply()`` coroutine."""
+        project_name: str = self.env_config.get("project_name", self.project_path.name)
+
+        for addon in addons:
+            try:
+                await addon.apply(self.project_path, project_name, self.env_config)
+            except PresetError:
+                raise
+            except Exception as exc:
+                raise PresetError(f"Add-on '{addon.name}' apply failed: {exc}") from exc
+
+        # Register a coarse rollback that deletes every file the add-ons
+        # may have created (except known infrastructure files).
+        def _undo_addon() -> None:
+            for child in self.project_path.iterdir():
+                if child.name in (
+                    ".env",
+                    ".gitignore",
+                    ".git",
+                    "pyproject.toml",
+                    "uv.lock",
+                ):
+                    continue
+                if child.is_dir():
+                    shutil.rmtree(child, ignore_errors=True)
+                else:
+                    self._safe_unlink(child)
+
+        self._rollback.push("undo add-on modules", _undo_addon)
+
     async def _step_uv_sync(self) -> None:
         """Run ``uv sync`` to lock the environment with live progress."""
         from ajo.core.exceptions import CommandExecutionError
@@ -497,6 +569,16 @@ class ScaffoldEngine:
                 core_files.extend(
                     (f"{project_name}/{path}", size) for path, size in preset_files
                 )
+
+        # Add-on-specific preview files
+        addons = getattr(self, "_addons", None)
+        if addons is not None:
+            for addon in addons:
+                addon_files = getattr(addon, "preview_files", None)
+                if addon_files is not None:
+                    core_files.extend(
+                        (f"{project_name}/{path}", size) for path, size in addon_files
+                    )
 
         # De-duplicate (keep first occurrence)
         seen: set[str] = set()
