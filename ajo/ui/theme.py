@@ -22,7 +22,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
-from ajo.core.constants import Theme, ThemeVariant
+from ajo.core.constants import Theme, ThemeVariant, icon
 
 
 # =============================================================================
@@ -360,20 +360,26 @@ class FileTreePreview:
             else:
                 standalone_files.append((path, size))
 
+        folder_glyph = icon("folder")
+        file_glyph = icon("file")
+
         # Render top-level directories
         for dir_name, children in sorted(dirs.items()):
             dir_node = tree.add(
-                Text(f"  {dir_name}/", style=Style(bold=True, color=p.secondary))
+                Text(
+                    f"{folder_glyph}  {dir_name}/",
+                    style=Style(bold=True, color=p.secondary),
+                )
             )
             for sub_path, size in sorted(children, key=lambda x: x[0]):
-                label = sub_path
+                label = f"{file_glyph}  {sub_path}"
                 if show_sizes:
                     label += f"  ({self._format_size(size)})"
                 dir_node.add(Text(label, style=Style(color=p.text)))
 
         # Render standalone files
         for path, size in sorted(standalone_files, key=lambda x: x[0]):
-            label = path
+            label = f"{file_glyph}  {path}"
             if show_sizes:
                 label += f"  ({self._format_size(size)})"
             tree.add(Text(label, style=Style(color=p.text)))

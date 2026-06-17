@@ -53,7 +53,23 @@ def detect_terminal_type() -> TerminalType:
 
 
 def has_nerd_fonts() -> bool:
-    """Return ``True`` if Nerd Fonts are available."""
+    """Return ``True`` if Nerd Fonts are available.
+
+    Checks the persistent config first (highest precedence), then falls
+    back to auto-detection via :class:`~ajo.ui.terminal_detector.TerminalDetector`.
+    """
+    try:
+        from ajo.core.config import get_config
+
+        config = get_config()
+        if config is not None:
+            pref = config.get("nerd_fonts")
+            if pref is True:
+                return True
+            if pref is False:
+                return False
+    except Exception:
+        pass
     return _get_caps().supports_nerd_fonts
 
 

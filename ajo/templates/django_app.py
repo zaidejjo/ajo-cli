@@ -18,6 +18,7 @@ from rich.progress import (
 
 from ajo.utils import generate_secure_key, rollback_project, append_to_installed_apps
 from ajo.core.exceptions import CommandExecutionError
+from ajo.core.constants import icon
 
 console = Console()
 
@@ -558,7 +559,7 @@ uv.lock
             app_dir = self.root_path / app_name
             if app_dir.exists():
                 console.print(
-                    f"  [dim]❯[/] App '{app_name}' already exists. Skipping creation."
+                    f"  [dim]{icon('bullet')}[/] App '{app_name}' already exists. Skipping creation."
                 )
                 return True
 
