@@ -4,7 +4,7 @@ requires-python = ">=3.10"
 
 [[package]]
 name = "ajo-cli"
-version = "3.0.1"
+version = "3.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "inquirerpy" },

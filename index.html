@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AJO - Professional Django Scaffolder with Cyberpunk TUI</title>
+  
+  <!-- Google Fonts: JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: 'var(--color-bg)',
+            panel: 'var(--color-panel)',
+            primary: 'var(--color-accent-primary)',
+            secondary: 'var(--color-accent-secondary)',
+            tertiary: 'var(--color-accent-tertiary)',
+            muted: 'var(--color-text-muted)',
+            bright: 'var(--color-text-bright)',
+          },
+          fontFamily: {
+            mono: ['JetBrains Mono', 'Fira Code', 'SF Mono', 'monospace'],
+          },
+          boxShadow: {
+            'neon-primary': '0 0 15px var(--color-accent-primary-glow)',
+            'neon-secondary': '0 0 15px var(--color-accent-secondary-glow)',
+            'neon-tertiary': '0 0 15px var(--color-accent-tertiary-glow)',
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Custom Styles for Cyberpunk TUI Aesthetic -->
+  <style>
+    :root {
+      /* Cyberpunk Theme (Default) */
+      --color-bg: #0a0b10;
+      --color-panel: #12131a;
+      --color-accent-primary: #00f2fe; /* Neon Cyan */
+      --color-accent-primary-glow: rgba(0, 242, 254, 0.35);
+      --color-accent-secondary: #00ffcc; /* Matrix Green */
+      --color-accent-secondary-glow: rgba(0, 255, 204, 0.35);
+      --color-accent-tertiary: #f355da; /* Cyber Pink */
+      --color-accent-tertiary-glow: rgba(243, 85, 218, 0.35);
+      --color-text-muted: #8f9bb3;
+      --color-text-bright: #ffffff;
+    }
+
+    [data-theme="dracula"] {
+      /* Dracula Theme */
+      --color-bg: #0b0914;
+      --color-panel: #181425;
+      --color-accent-primary: #bd93f9; /* Dracula Purple */
+      --color-accent-primary-glow: rgba(189, 147, 249, 0.35);
+      --color-accent-secondary: #50fa7b; /* Dracula Green */
+      --color-accent-secondary-glow: rgba(80, 250, 123, 0.35);
+      --color-accent-tertiary: #ff79c6; /* Dracula Pink */
+      --color-accent-tertiary-glow: rgba(255, 121, 198, 0.35);
+      --color-text-muted: #a4b1cd;
+      --color-text-bright: #f8f8f2;
+    }
+
+    [data-theme="monochromatic"] {
+      /* Monochromatic Theme */
+      --color-bg: #0f172a; /* Slate 900 */
+      --color-panel: #1e293b; /* Slate 800 */
+      --color-accent-primary: #cbd5e1; /* Slate 300 */
+      --color-accent-primary-glow: rgba(203, 213, 225, 0.25);
+      --color-accent-secondary: #38bdf8; /* Sky 400 */
+      --color-accent-secondary-glow: rgba(56, 189, 248, 0.35);
+      --color-accent-tertiary: #94a3b8; /* Slate 400 */
+      --color-accent-tertiary-glow: rgba(148, 163, 184, 0.25);
+      --color-text-muted: #64748b; /* Slate 500 */
+      --color-text-bright: #f8fafc; /* Slate 50 */
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--color-bg);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--color-panel);
+      border: 1px solid var(--color-accent-primary);
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-accent-primary);
+    }
+
+    /* CRT Scanline Effect */
+    .crt-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.04));
+      background-size: 100% 4px, 6px 100%;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.15;
+    }
+
+    /* Grid Overlay */
+    .grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Subtle scanline animation */
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100%); }
+    }
+
+    .scanline-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 10px;
+      background: linear-gradient(to bottom, transparent, var(--color-accent-primary), transparent);
+      opacity: 0.03;
+      z-index: 9998;
+      pointer-events: none;
+      animation: scanline 15s linear infinite;
+    }
+
+    /* Glow Effects */
+    .text-glow-primary {
+      text-shadow: 0 0 8px var(--color-accent-primary);
+    }
+    .text-glow-secondary {
+      text-shadow: 0 0 8px var(--color-accent-secondary);
+    }
+    .text-glow-tertiary {
+      text-shadow: 0 0 8px var(--color-accent-tertiary);
+    }
+
+    /* Blinking Cursor */
+    .cursor-blink::after {
+      content: '█';
+      display: inline-block;
+      margin-left: 2px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+      from, to { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* Pulsing Status Dot */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.25); }
+    }
+    .pulse-dot {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Cyberpunk Border Corners */
+    .cyber-corners {
+      position: relative;
+    }
+    .cyber-corners::before, .cyber-corners::after {
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-color: var(--color-accent-primary);
+      border-style: solid;
+      pointer-events: none;
+    }
+    .cyber-corners::before {
+      top: -1px;
+      left: -1px;
+      border-width: 2px 0 0 2px;
+    }
+    .cyber-corners::after {
+      bottom: -1px;
+      right: -1px;
+      border-width: 0 2px 2px 0;
+    }
+
+    /* Custom Terminal Line Height & Spacing */
+    .terminal-output {
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body class="bg-bg text-bright font-mono relative min-h-screen overflow-x-hidden selection:bg-primary selection:text-bg">
+
+  <!-- CRT & Grid Overlays -->
+  <div class="crt-overlay"></div>
+  <div class="grid-overlay"></div>
+  <div class="scanline-bar"></div>
+
+  <!-- Header / Navbar -->
+  <header class="sticky top-0 z-50 bg-bg/80 backdrop-blur-md border-b border-panel px-4 lg:px-8 py-4">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Left Side: Logo & Status -->
+      <div class="flex items-center gap-4">
+        <a href="#" class="flex items-center gap-2 group">
+          <span class="text-xl font-extrabold tracking-wider text-primary text-glow-primary transition-all duration-300 group-hover:text-tertiary group-hover:text-glow-tertiary">
+            AJO
+          </span>
+          <span class="text-xs px-2 py-0.5 bg-panel border border-primary/30 text-primary rounded">
+            v3.3.0
+          </span>
+        </a>
+        <div class="flex items-center gap-2 bg-panel/50 border border-panel px-3 py-1 rounded-full">
+          <span class="w-2.5 h-2.5 rounded-full bg-secondary pulse-dot shadow-[0_0_8px_var(--color-accent-secondary)]"></span>
+          <span class="text-[10px] tracking-widest text-secondary font-bold uppercase">SYSTEM ONLINE</span>
+        </div>
+      </div>
+
+      <!-- Center: Navigation Links -->
+      <nav class="flex items-center gap-6 text-xs tracking-wider">
+        <a href="#presets" class="text-muted hover:text-primary transition-colors duration-200 uppercase">Presets</a>
+        <a href="#installation" class="text-muted hover:text-primary transition-colors duration-200 uppercase">Installation</a>
+        <a href="#features" class="text-muted hover:text-primary transition-colors duration-200 uppercase">Diagnostics</a>
+      </nav>
+
+      <!-- Right Side: Theme Switcher & External Links -->
+      <div class="flex items-center gap-3">
+        
+        <!-- Theme Switcher Button -->
+        <button id="theme-switcher" class="flex items-center gap-2 px-3 py-1.5 bg-panel border border-panel hover:border-primary/50 text-xs text-muted hover:text-primary rounded transition-all duration-200" title="Cycle Accent Theme">
+          <i data-lucide="palette" class="w-4 h-4"></i>
+          <span class="hidden sm:inline uppercase font-bold tracking-wider text-[10px]">THEME: <span id="current-theme-name" class="text-primary">CYBERPUNK</span></span>
+        </button>
+
+        <!-- GitHub Repo Button -->
+        <a href="https://github.com/zaidejjo/ajo-cli" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1.5 bg-panel border border-panel hover:border-primary/50 text-xs text-muted hover:text-primary rounded transition-all duration-200" title="GitHub Repository">
+          <i data-lucide="github" class="w-4 h-4"></i>
+          <span class="hidden sm:inline uppercase font-bold tracking-wider text-[10px]">GITHUB</span>
+        </a>
+
+        <!-- Developer Portfolio Button -->
+        <a href="https://zaidejjo.github.io/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1.5 bg-primary text-bg font-bold hover:bg-transparent hover:text-primary border border-primary text-xs rounded transition-all duration-200" title="Developer Portfolio">
+          <i data-lucide="external-link" class="w-4 h-4"></i>
+          <span class="hidden sm:inline uppercase font-bold tracking-wider text-[10px]">PORTFOLIO</span>
+        </a>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="relative z-10 max-w-7xl mx-auto px-4 lg:px-8 py-12 space-y-24">
+
+    <!-- Hero Section + Interactive Terminal Simulator -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      
+      <!-- Left Side: Project Info -->
+      <div class="lg:col-span-5 space-y-6">
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-panel border border-tertiary/30 text-tertiary text-glow-tertiary text-xs rounded">
+            <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+            <span>NEXT-GEN DJANGO SCAFFOLDER</span>
+          </div>
+          <h1 class="text-5xl lg:text-6xl font-extrabold tracking-tight text-bright">
+            AJO <span class="text-primary text-glow-primary">CLI</span>
+          </h1>
+          <p class="text-lg lg:text-xl font-medium text-secondary text-glow-secondary">
+            Professional Django Scaffolder with Cyberpunk TUI
+          </p>
+        </div>
+
+        <p class="text-muted text-sm leading-relaxed">
+          An interactive CLI tool that generates production-ready Django projects with a beautiful cyberpunk-themed terminal UI. Pick your architecture, database, and add-on modules — AJO handles the rest.
+        </p>
+
+        <!-- One-liner Command Copy Button -->
+        <div class="space-y-2">
+          <span class="text-[10px] tracking-widest text-muted uppercase font-bold">QUICK INSTALLATION</span>
+          <div class="flex items-center justify-between bg-panel border border-panel hover:border-primary/30 rounded p-3 transition-all duration-300">
+            <div class="flex items-center gap-3 overflow-hidden">
+              <span class="text-primary font-bold select-none">$</span>
+              <code class="text-xs text-bright font-mono truncate" id="quick-install-cmd">pipx install ajo-cli</code>
+            </div>
+            <button onclick="copyCommand('pipx install ajo-cli', 'copy-btn-hero')" id="copy-btn-hero" class="p-1.5 text-muted hover:text-primary hover:bg-bg rounded transition-all duration-200" title="Copy to Clipboard">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tech Badges -->
+        <div class="flex flex-wrap gap-3 pt-2">
+          <div class="flex items-center gap-1.5 px-2.5 py-1 bg-panel/40 border border-panel text-xs text-muted rounded">
+            <i data-lucide="code-2" class="w-3.5 h-3.5 text-primary"></i>
+            <span>Python 3.10+</span>
+          </div>
+          <div class="flex items-center gap-1.5 px-2.5 py-1 bg-panel/40 border border-panel text-xs text-muted rounded">
+            <i data-lucide="server" class="w-3.5 h-3.5 text-secondary"></i>
+            <span>Django 5.0+</span>
+          </div>
+          <div class="flex items-center gap-1.5 px-2.5 py-1 bg-panel/40 border border-panel text-xs text-muted rounded">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-tertiary"></i>
+            <span>uv Powered</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Side: Interactive Terminal Simulator -->
+      <div class="lg:col-span-7">
+        <div class="bg-panel border border-panel rounded-lg overflow-hidden shadow-2xl relative cyber-corners">
+          
+          <!-- Terminal Header -->
+          <div class="bg-bg border-b border-panel px-4 py-3 flex items-center justify-between select-none">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
+              <span class="w-3 h-3 rounded-full bg-green-500/80"></span>
+            </div>
+            <span class="text-xs text-muted font-bold tracking-wider">ajo@terminal: ~</span>
+            <button onclick="restartTerminalAnimation()" class="p-1 text-muted hover:text-primary rounded transition-colors duration-200" title="Restart Animation">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <!-- Terminal Screen -->
+          <div class="p-6 h-[420px] overflow-y-auto font-mono text-xs text-bright/90 space-y-3 terminal-output" id="terminal-screen">
+            <!-- Content will be dynamically injected by JS -->
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Architecture Presets & Add-on Modules (The Grid) -->
+    <section id="presets" class="space-y-12">
+      
+      <!-- Section Header -->
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-panel border border-primary/30 text-primary text-glow-primary text-xs rounded">
+          <i data-lucide="grid" class="w-3.5 h-3.5"></i>
+          <span>MODULAR ARCHITECTURE</span>
+        </div>
+        <h2 class="text-3xl font-extrabold tracking-tight">
+          Architecture <span class="text-secondary text-glow-secondary">Presets</span>
+        </h2>
+        <p class="text-muted text-sm max-w-2xl mx-auto">
+          AJO generates clean, production-ready project structures tailored to your specific stack. Choose your foundation and layer features seamlessly.
+        </p>
+      </div>
+
+      <!-- Presets Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Preset 1: Standard Monolith -->
+        <div class="bg-panel border border-panel hover:border-primary/50 hover:shadow-neon-primary rounded-lg p-6 transition-all duration-300 flex flex-col justify-between group relative">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="p-3 bg-bg border border-panel group-hover:border-primary/30 rounded text-primary transition-all duration-300">
+                <i data-lucide="layout-template" class="w-6 h-6"></i>
+              </div>
+              <span class="text-[10px] font-bold tracking-widest text-muted uppercase">monolith</span>
+            </div>
+            <div class="space-y-2">
+              <h3 class="text-lg font-bold text-bright group-hover:text-primary transition-colors duration-200">Standard Monolith</h3>
+              <p class="text-xs text-muted leading-relaxed">
+                Classic full-stack Django setup integrated with Bootstrap 5 and HTMX for dynamic, modern user interfaces without SPA complexity.
+              </p>
+            </div>
+          </div>
+          <div class="pt-6 border-t border-panel/50 mt-6 flex items-center justify-between text-[10px] text-muted font-bold tracking-wider">
+            <span>STACK: DJANGO + HTMX</span>
+            <span class="text-primary">READY</span>
+          </div>
+        </div>
+
+        <!-- Preset 2: REST API Ready -->
+        <div class="bg-panel border border-panel hover:border-secondary/50 hover:shadow-neon-secondary rounded-lg p-6 transition-all duration-300 flex flex-col justify-between group relative">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="p-3 bg-bg border border-panel group-hover:border-secondary/30 rounded text-secondary transition-all duration-300">
+                <i data-lucide="server" class="w-6 h-6"></i>
+              </div>
+              <span class="text-[10px] font-bold tracking-widest text-muted uppercase">rest-api</span>
+            </div>
+            <div class="space-y-2">
+              <h3 class="text-lg font-bold text-bright group-hover:text-secondary transition-colors duration-200">REST API Ready</h3>
+              <p class="text-xs text-muted leading-relaxed">
+                Django REST Framework (DRF) foundation equipped with JWT authentication, CORS headers, and auto-generated Swagger/OpenAPI documentation.
+              </p>
+            </div>
+          </div>
+          <div class="pt-6 border-t border-panel/50 mt-6 flex items-center justify-between text-[10px] text-muted font-bold tracking-wider">
+            <span>STACK: DRF + JWT + SWAGGER</span>
+            <span class="text-secondary">MODEL-AWARE</span>
+          </div>
+        </div>
+
+        <!-- Preset 3: Ninja API -->
+        <div class="bg-panel border border-panel hover:border-tertiary/50 hover:shadow-neon-tertiary rounded-lg p-6 transition-all duration-300 flex flex-col justify-between group relative">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="p-3 bg-bg border border-panel group-hover:border-tertiary/30 rounded text-tertiary transition-all duration-300">
+                <i data-lucide="zap" class="w-6 h-6"></i>
+              </div>
+              <span class="text-[10px] font-bold tracking-widest text-muted uppercase">ninja-api</span>
+            </div>
+            <div class="space-y-2">
+              <h3 class="text-lg font-bold text-bright group-hover:text-tertiary transition-colors duration-200">Ninja API</h3>
+              <p class="text-xs text-muted leading-relaxed">
+                High-performance, type-safe API structure using django-ninja and Pydantic. Features fast execution speeds and interactive Swagger UI.
+              </p>
+            </div>
+          </div>
+          <div class="pt-6 border-t border-panel/50 mt-6 flex items-center justify-between text-[10px] text-muted font-bold tracking-wider">
+            <span>STACK: NINJA + PYDANTIC</span>
+            <span class="text-tertiary">MODEL-AWARE</span>
+          </div>
+        </div>
+
+        <!-- Preset 4: GraphQL API -->
+        <div class="bg-panel border border-panel hover:border-primary/50 hover:shadow-neon-primary rounded-lg p-6 transition-all duration-300 flex flex-col justify-between group relative">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="p-3 bg-bg border border-panel group-hover:border-primary/30 rounded text-primary transition-all duration-300">
+                <i data-lucide="network" class="w-6 h-6"></i>
+              </div>
+              <span class="text-[10px] font-bold tracking-widest text-muted uppercase">graphql-api</span>
+            </div>
+            <div class="space-y-2">
+              <h3 class="text-lg font-bold text-bright group-hover:text-primary transition-colors duration-200">GraphQL API</h3>
+              <p class="text-xs text-muted leading-relaxed">
+                Modern GraphQL endpoint powered by Graphene and Relay. Includes pre-configured GraphiQL IDE for interactive query testing.
+              </p>
+            </div>
+          </div>
+          <div class="pt-6 border-t border-panel/50 mt-6 flex items-center justify-between text-[10px] text-muted font-bold tracking-wider">
+            <span>STACK: GRAPHENE + RELAY</span>
+            <span class="text-primary">MODEL-AWARE</span>
+          </div>
+        </div>
+
+        <!-- Preset 5: Dockerized Stack -->
+        <div class="bg-panel border border-panel hover:border-secondary/50 hover:shadow-neon-secondary rounded-lg p-6 transition-all duration-300 flex flex-col justify-between group relative">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="p-3 bg-bg border border-panel group-hover:border-secondary/30 rounded text-secondary transition-all duration-300">
+                <i data-lucide="box" class="w-6 h-6"></i>
+              </div>
+              <span class="text-[10px] font-bold tracking-widest text-muted uppercase">docker</span>
+            </div>
+            <div class="space-y-2">
+              <h3 class="text-lg font-bold text-bright group-hover:text-secondary transition-colors duration-200">Docker Stack</h3>
+              <p class="text-xs text-muted leading-relaxed">
+                Multi-stage Dockerfile optimized with uv caching, paired with docker-compose.yml containing PostgreSQL, Redis, and Mailhog.
+              </p>
+            </div>
+          </div>
+          <div class="pt-6 border-t border-panel/50 mt-6 flex items-center justify-between text-[10px] text-muted font-bold tracking-wider">
+            <span>STACK: COMPOSE + REDIS + MAILHOG</span>
+            <span class="text-secondary">PRODUCTION</span>
+          </div>
+        </div>
+
+        <!-- Model-Aware Feature Card -->
+        <div class="bg-panel/40 border border-dashed border-panel rounded-lg p-6 flex flex-col justify-between relative">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="p-3 bg-bg border border-panel rounded text-tertiary">
+                <i data-lucide="binary" class="w-6 h-6"></i>
+              </div>
+              <span class="text-[10px] font-bold tracking-widest text-tertiary uppercase">AST ANALYSIS</span>
+            </div>
+            <div class="space-y-2">
+              <h3 class="text-lg font-bold text-bright">Model-Aware Scaffolding</h3>
+              <p class="text-xs text-muted leading-relaxed">
+                AJO's API presets scan your Django models via AST analysis to auto-generate serializers, viewsets, routers, and endpoints instantly.
+              </p>
+            </div>
+          </div>
+          <div class="pt-6 border-t border-panel/50 mt-6 flex items-center justify-between text-[10px] text-muted font-bold tracking-wider">
+            <span>ZERO BOILERPLATE</span>
+            <span class="text-tertiary">SMART ENGINE</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Add-on Modules Section -->
+      <div class="space-y-8 pt-8">
+        <div class="text-center space-y-2">
+          <h3 class="text-2xl font-extrabold tracking-tight">
+            Add-on <span class="text-tertiary text-glow-tertiary">Modules</span>
+          </h3>
+          <p class="text-muted text-xs max-w-xl mx-auto">
+            Layer optional features on top of any preset. Select them interactively during scaffolding or pass them via CLI flags.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Add-on 1: Auth & Users -->
+          <div class="bg-panel border border-panel hover:border-primary/30 rounded-lg p-6 flex gap-4 transition-all duration-300">
+            <div class="p-3 bg-bg border border-panel rounded text-primary h-fit">
+              <i data-lucide="key-round" class="w-6 h-6"></i>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <h4 class="font-bold text-bright">Auth & Users</h4>
+                <span class="text-[9px] px-2 py-0.5 bg-bg border border-panel text-primary rounded font-bold uppercase">auth</span>
+              </div>
+              <p class="text-xs text-muted leading-relaxed">
+                SimpleJWT authentication, custom User model with bio/avatar fields, registration/login templates, and preset-aware REST or Ninja endpoints.
+              </p>
+            </div>
+          </div>
+
+          <!-- Add-on 2: Caching & Performance -->
+          <div class="bg-panel border border-panel hover:border-secondary/30 rounded-lg p-6 flex gap-4 transition-all duration-300">
+            <div class="p-3 bg-bg border border-panel rounded text-secondary h-fit">
+              <i data-lucide="cpu" class="w-6 h-6"></i>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <h4 class="font-bold text-bright">Caching & Performance</h4>
+                <span class="text-[9px] px-2 py-0.5 bg-bg border border-panel text-secondary rounded font-bold uppercase">cache</span>
+              </div>
+              <p class="text-xs text-muted leading-relaxed">
+                Redis caching integration via <code class="text-secondary">django-redis</code>, database connection pooling, django-debug-toolbar, and demo cached views.
+              </p>
+            </div>
+          </div>
+
+          <!-- Add-on 3: Security Hardening -->
+          <div class="bg-panel border border-panel hover:border-tertiary/30 rounded-lg p-6 flex gap-4 transition-all duration-300">
+            <div class="p-3 bg-bg border border-panel rounded text-tertiary h-fit">
+              <i data-lucide="shield-alert" class="w-6 h-6"></i>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <h4 class="font-bold text-bright">Security Hardening</h4>
+                <span class="text-[9px] px-2 py-0.5 bg-bg border border-panel text-tertiary rounded font-bold uppercase">security</span>
+              </div>
+              <p class="text-xs text-muted leading-relaxed">
+                Brute-force protection via <code class="text-tertiary">django-axes</code>, TOTP 2FA, Content Security Policy (CSP) headers, and HSTS/XSS/CSRF hardening.
+              </p>
+            </div>
+          </div>
+
+          <!-- Add-on 4: Testing Infrastructure -->
+          <div class="bg-panel border border-panel hover:border-primary/30 rounded-lg p-6 flex gap-4 transition-all duration-300">
+            <div class="p-3 bg-bg border border-panel rounded text-primary h-fit">
+              <i data-lucide="beaker" class="w-6 h-6"></i>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <h4 class="font-bold text-bright">Testing Infrastructure</h4>
+                <span class="text-[9px] px-2 py-0.5 bg-bg border border-panel text-primary rounded font-bold uppercase">testing</span>
+              </div>
+              <p class="text-xs text-muted leading-relaxed">
+                pytest + pytest-django setup, coverage reporting (fail-under 80%), factory-boy integration, and auto-generated model factories and API tests.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Installation Section (Tabbed Router) -->
+    <section id="installation" class="space-y-12">
+      
+      <!-- Section Header -->
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-panel border border-secondary/30 text-secondary text-glow-secondary text-xs rounded">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>GETTING STARTED</span>
+        </div>
+        <h2 class="text-3xl font-extrabold tracking-tight">
+          Installation <span class="text-primary text-glow-primary">Guide</span>
+        </h2>
+        <p class="text-muted text-sm max-w-2xl mx-auto">
+          Install AJO using your preferred package manager. We recommend using isolated environments like pipx or uv.
+        </p>
+      </div>
+
+      <!-- Tabbed Terminal Container -->
+      <div class="max-w-3xl mx-auto bg-panel border border-panel rounded-lg overflow-hidden shadow-2xl relative cyber-corners">
+        
+        <!-- Terminal Header with Tabs -->
+        <div class="bg-bg border-b border-panel flex flex-col sm:flex-row sm:items-center justify-between select-none">
+          
+          <!-- Tabs -->
+          <div class="flex flex-wrap border-b sm:border-b-0 border-panel">
+            <button onclick="switchTab('pipx')" id="tab-pipx" class="px-5 py-3 text-xs font-bold tracking-wider border-r border-panel transition-all duration-200 text-primary border-b-2 border-b-primary bg-panel/30">
+              pipx / pip
+            </button>
+            <button onclick="switchTab('uv')" id="tab-uv" class="px-5 py-3 text-xs font-bold tracking-wider border-r border-panel transition-all duration-200 text-muted hover:text-bright border-b-2 border-b-transparent">
+              uv tool
+            </button>
+            <button onclick="switchTab('aur')" id="tab-aur" class="px-5 py-3 text-xs font-bold tracking-wider border-r border-panel transition-all duration-200 text-muted hover:text-bright border-b-2 border-b-transparent">
+              AUR (Arch)
+            </button>
+            <button onclick="switchTab('source')" id="tab-source" class="px-5 py-3 text-xs font-bold tracking-wider border-r border-panel transition-all duration-200 text-muted hover:text-bright border-b-2 border-b-transparent">
+              From Source
+            </button>
+          </div>
+
+          <!-- Window Controls -->
+          <div class="hidden sm:flex items-center gap-2 px-4 py-3">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500/60"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-green-500/60"></span>
+          </div>
+
+        </div>
+
+        <!-- Terminal Code Block -->
+        <div class="p-6 bg-panel/50 relative group">
+          
+          <!-- Copy Button -->
+          <button id="copy-tab-btn" onclick="copyTabCode()" class="absolute top-4 right-4 p-2 bg-bg border border-panel hover:border-primary/50 text-muted hover:text-primary rounded transition-all duration-200" title="Copy Code Block">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Code Snippets -->
+          <pre class="text-xs text-bright/90 font-mono overflow-x-auto leading-relaxed" id="code-block"><code># Recommended — isolated environment
+pipx install ajo-cli
+
+# With pip (global)
+pip install ajo-cli</code></pre>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Smart CLI & Diagnostics Features -->
+    <section id="features" class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      
+      <!-- Left Side: Interactive Diagnostics Panel -->
+      <div class="lg:col-span-6 order-2 lg:order-1">
+        <div class="bg-panel border border-panel rounded-lg overflow-hidden shadow-2xl relative cyber-corners">
+          
+          <!-- Panel Header -->
+          <div class="bg-bg border-b border-panel px-4 py-3 flex items-center justify-between select-none">
+            <div class="flex items-center gap-2">
+              <i data-lucide="activity" class="w-4 h-4 text-tertiary text-glow-tertiary"></i>
+              <span class="text-xs text-bright font-bold tracking-wider">AJO DIAGNOSTIC ENGINE</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 bg-panel border border-tertiary/30 text-tertiary rounded font-bold">SCANNER</span>
+          </div>
+
+          <!-- Diagnostics Screen -->
+          <div class="p-6 space-y-4 font-mono text-xs" id="diagnostics-screen">
+            
+            <!-- Status Header -->
+            <div class="flex items-center justify-between border-b border-panel pb-3">
+              <span class="text-muted">TARGET: ./my_django_project</span>
+              <span class="text-tertiary font-bold" id="diag-status">READY TO SCAN</span>
+            </div>
+
+            <!-- Diagnostic Checks -->
+            <div class="space-y-3" id="diag-checks-list">
+              <div class="flex items-start gap-3 text-muted">
+                <i data-lucide="circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                <div>
+                  <p class="font-bold">Check: Missing contrib apps in INSTALLED_APPS</p>
+                  <p class="text-[10px] text-muted/70">Scans settings.py for standard Django apps</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 text-muted">
+                <i data-lucide="circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                <div>
+                  <p class="font-bold">Check: Missing ALLOWED_HOSTS configuration</p>
+                  <p class="text-[10px] text-muted/70">Verifies host validation settings</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 text-muted">
+                <i data-lucide="circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                <div>
+                  <p class="font-bold">Check: Hardcoded DEBUG=True in production</p>
+                  <p class="text-[10px] text-muted/70">Checks environment variable fallback</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 text-muted">
+                <i data-lucide="circle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                <div>
+                  <p class="font-bold">Check: Missing or placeholder SECRET_KEY</p>
+                  <p class="text-[10px] text-muted/70">Validates cryptographic key strength</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Button -->
+            <div class="pt-4 border-t border-panel flex justify-end">
+              <button onclick="runDiagnosticsDemo()" id="run-diag-btn" class="flex items-center gap-2 px-4 py-2 bg-tertiary text-bg font-bold hover:bg-transparent hover:text-tertiary border border-tertiary rounded transition-all duration-200">
+                <i data-lucide="play" class="w-4 h-4"></i>
+                <span>RUN DIAGNOSTICS</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right Side: Feature Description -->
+      <div class="lg:col-span-6 space-y-6 order-1 lg:order-2">
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-panel border border-tertiary/30 text-tertiary text-glow-tertiary text-xs rounded">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            <span>SELF-HEALING SYSTEM</span>
+          </div>
+          <h2 class="text-3xl font-extrabold tracking-tight">
+            Smart CLI & <span class="text-tertiary text-glow-tertiary">Diagnostics</span>
+          </h2>
+          <p class="text-muted text-sm leading-relaxed">
+            AJO isn't just for scaffolding. Run <code class="text-tertiary">ajo</code> inside any existing Django project to unlock a context-aware management dashboard and self-healing diagnostic engine.
+          </p>
+        </div>
+
+        <!-- Feature List -->
+        <div class="space-y-4">
+          
+          <!-- Feature 1 -->
+          <div class="flex gap-3">
+            <div class="p-1.5 bg-panel border border-panel rounded text-primary h-fit mt-1">
+              <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-bright text-sm">Live Project Dashboard</h4>
+              <p class="text-xs text-muted leading-relaxed">
+                Displays real-time project metadata, active git branch, virtualenv status, server state, unapplied migrations, and Ruff lint status.
+              </p>
+            </div>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="flex gap-3">
+            <div class="p-1.5 bg-panel border border-panel rounded text-secondary h-fit mt-1">
+              <i data-lucide="wrench" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-bright text-sm">One-Click Auto-Fixes</h4>
+              <p class="text-xs text-muted leading-relaxed">
+                Detects misconfigurations and offers instant, automated fixes like generating secure keys, wiring admin URLs, and renaming duplicate migrations.
+              </p>
+            </div>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="flex gap-3">
+            <div class="p-1.5 bg-panel border border-panel rounded text-tertiary h-fit mt-1">
+              <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-bright text-sm">Context-Aware Commands</h4>
+              <p class="text-xs text-muted leading-relaxed">
+                Highlights urgent actions (like creating superusers or running migrations) based on the current state of your local database and codebase.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-panel bg-panel/20 py-12 relative z-10">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      
+      <!-- Left Side: Tech Stack & Copyright -->
+      <div class="space-y-2 text-center md:text-left">
+        <div class="flex items-center justify-center md:justify-start gap-2 text-xs text-muted">
+          <span>Built with</span>
+          <i data-lucide="heart" class="w-3.5 h-3.5 text-tertiary"></i>
+          <span>Python 3.10+</span>
+          <span>·</span>
+          <span>Django 5.0+</span>
+          <span>·</span>
+          <span>uv</span>
+          <span>·</span>
+          <span>Ruff</span>
+        </div>
+        <p class="text-[10px] text-muted/60 uppercase tracking-widest">
+          &copy; 2026 AJO CLI · MIT LICENSE
+        </p>
+      </div>
+
+      <!-- Right Side: Developer Links -->
+      <div class="flex items-center gap-6 text-xs font-bold tracking-wider">
+        <a href="https://github.com/zaidejjo" target="_blank" rel="noopener noreferrer" class="text-muted hover:text-primary transition-colors duration-200 flex items-center gap-1.5">
+          <i data-lucide="github" class="w-4 h-4"></i>
+          <span>ZAID'S GITHUB</span>
+        </a>
+        <a href="https://zaidejjo.github.io/" target="_blank" rel="noopener noreferrer" class="text-muted hover:text-primary transition-colors duration-200 flex items-center gap-1.5">
+          <i data-lucide="globe" class="w-4 h-4"></i>
+          <span>PORTFOLIO</span>
+        </a>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- JavaScript Polish -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Theme Switcher Logic
+    const themes = ['cyberpunk', 'dracula', 'monochromatic'];
+    let currentThemeIndex = 0;
+
+    // Load saved theme if exists
+    const savedTheme = localStorage.getItem('ajo-theme');
+    if (savedTheme && themes.includes(savedTheme)) {
+      currentThemeIndex = themes.indexOf(savedTheme);
+      setTheme(savedTheme);
+    }
+
+    document.getElementById('theme-switcher').addEventListener('click', () => {
+      currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+      const nextTheme = themes[currentThemeIndex];
+      setTheme(nextTheme);
+    });
+
+    function setTheme(themeName) {
+      document.documentElement.setAttribute('data-theme', themeName);
+      localStorage.setItem('ajo-theme', themeName);
+      
+      // Update theme name in UI
+      const themeLabel = document.getElementById('current-theme-name');
+      themeLabel.textContent = themeName.toUpperCase();
+      
+      // Re-initialize icons if needed
+      lucide.createIcons();
+    }
+
+    // Copy to Clipboard Utility
+    function copyCommand(text, buttonId) {
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById(buttonId);
+        const originalHTML = btn.innerHTML;
+        
+        // Update button to show success
+        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-secondary"></i>';
+        lucide.createIcons();
+        
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+          lucide.createIcons();
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+    }
+
+    // Installation Section Tab Switcher
+    const codeSnippets = {
+      pipx: `# Recommended — isolated environment\npipx install ajo-cli\n\n# With pip (global)\npip install ajo-cli`,
+      uv: `# Install as a tool with uv\nuv tool install ajo-cli`,
+      aur: `# Install using yay\nyay -S ajo-cli\n\n# Or using paru\nparu -S ajo-cli`,
+      source: `# Clone the repository\ngit clone https://github.com/zaidejjo/ajo-cli.git\ncd ajo-cli\n\n# Sync dependencies with uv\nuv sync\n\n# Run ajo\najo --version`
+    };
+
+    let activeTab = 'pipx';
+
+    function switchTab(tabName) {
+      // Update active tab state
+      const tabs = ['pipx', 'uv', 'aur', 'source'];
+      tabs.forEach(t => {
+        const tabBtn = document.getElementById(`tab-${t}`);
+        if (t === tabName) {
+          tabBtn.classList.remove('text-muted', 'border-b-transparent');
+          tabBtn.classList.add('text-primary', 'border-b-primary', 'bg-panel/30');
+        } else {
+          tabBtn.classList.remove('text-primary', 'border-b-primary', 'bg-panel/30');
+          tabBtn.classList.add('text-muted', 'border-b-transparent');
+        }
+      });
+
+      // Update code block content
+      const codeBlock = document.getElementById('code-block');
+      codeBlock.innerHTML = `<code>${codeSnippets[tabName]}</code>`;
+      activeTab = tabName;
+    }
+
+    function copyTabCode() {
+      const codeText = codeSnippets[activeTab];
+      copyCommand(codeText, 'copy-tab-btn');
+    }
+
+    // Interactive Terminal Simulator Animation
+    const terminalScreen = document.getElementById('terminal-screen');
+    let terminalTimeoutIds = [];
+
+    const asciiLogo = ` █████╗      ██╗ ██████╗ 
+██╔══██╗     ██║██╔═══██╗
+███████║     ██║██║   ██║
+██╔══██║██   ██║██║   ██║
+██║  ██║╚█████╔╝╚██████╔╝
+╚═╝  ╚═╝ ╚════╝  ╚═════╝ `;
+
+    function sleep(ms) {
+      return new Promise(resolve => {
+        const id = setTimeout(resolve, ms);
+        terminalTimeoutIds.push(id);
+      });
+    }
+
+    function clearTerminal() {
+      terminalScreen.innerHTML = '';
+    }
+
+    function printLine(text, className = '') {
+      const div = document.createElement('div');
+      if (className) div.className = className;
+      div.innerHTML = text;
+      terminalScreen.appendChild(div);
+      terminalScreen.scrollTop = terminalScreen.scrollHeight;
+    }
+
+    async function typeText(text, className = '') {
+      const div = document.createElement('div');
+      if (className) div.className = className;
+      div.classList.add('cursor-blink');
+      terminalScreen.appendChild(div);
+      
+      for (let i = 0; i < text.length; i++) {
+        div.textContent += text[i];
+        terminalScreen.scrollTop = terminalScreen.scrollHeight;
+        await sleep(60 + Math.random() * 40);
+      }
+      
+      div.classList.remove('cursor-blink');
+    }
+
+    async function runTerminalAnimation() {
+      clearTerminal();
+      
+      // Step 1: Type command
+      printLine('<span class="text-muted">ajo@terminal:~$</span> ', 'inline');
+      await sleep(500);
+      await typeText('ajo', 'inline-block');
+      await sleep(300);
+      printLine(''); // Newline
+      
+      // Step 2: Render Logo
+      await sleep(200);
+      printLine(`<pre class="text-primary text-glow-primary font-bold leading-tight">${asciiLogo}</pre>`);
+      await sleep(400);
+      printLine('<span class="text-primary font-bold">AJO v3.3.0</span> - Professional Django Scaffolder');
+      printLine('Initializing interactive scaffold session...\n', 'text-muted');
+      await sleep(800);
+
+      // Step 3: Prompt Preset
+      printLine('<span class="text-secondary font-bold">?</span> <span class="font-bold">Choose Architecture Preset:</span>');
+      const presetDiv = document.createElement('div');
+      presetDiv.className = 'space-y-1 pl-4';
+      presetDiv.innerHTML = `
+        <div id="p-mono" class="text-primary font-bold">&gt; Standard Monolith (Django + Bootstrap 5 + HTMX)</div>
+        <div id="p-rest" class="text-muted">&nbsp;&nbsp;REST API Ready (DRF + JWT + CORS + Swagger)</div>
+        <div id="p-ninja" class="text-muted">&nbsp;&nbsp;Ninja API (django-ninja + Pydantic + Swagger)</div>
+        <div id="p-graphql" class="text-muted">&nbsp;&nbsp;GraphQL API (Graphene + Relay + GraphiQL)</div>
+        <div id="p-docker" class="text-muted">&nbsp;&nbsp;Docker (Multi-stage Dockerfile + Compose)</div>
+      `;
+      terminalScreen.appendChild(presetDiv);
+      terminalScreen.scrollTop = terminalScreen.scrollHeight;
+      
+      // Animate selection down to REST API
+      await sleep(1000);
+      document.getElementById('p-mono').className = 'text-muted';
+      document.getElementById('p-mono').innerHTML = '&nbsp;&nbsp;Standard Monolith (Django + Bootstrap 5 + HTMX)';
+      document.getElementById('p-rest').className = 'text-primary font-bold';
+      document.getElementById('p-rest').innerHTML = '&gt; REST API Ready (DRF + JWT + CORS + Swagger)';
+      terminalScreen.scrollTop = terminalScreen.scrollHeight;
+      
+      await sleep(800);
+      // Confirm selection
+      presetDiv.remove();
+      printLine('<span class="text-secondary font-bold">✔</span> <span class="font-bold">Choose Architecture Preset:</span> <span class="text-primary">REST API Ready</span>');
+      await sleep(600);
+
+      // Step 4: Prompt Database
+      printLine('<span class="text-secondary font-bold">?</span> <span class="font-bold">Select Database:</span>');
+      const dbDiv = document.createElement('div');
+      dbDiv.className = 'space-y-1 pl-4';
+      dbDiv.innerHTML = `
+        <div id="db-pg" class="text-primary font-bold">&gt; PostgreSQL</div>
+        <div id="db-my" class="text-muted">&nbsp;&nbsp;MySQL</div>
+        <div id="db-sq" class="text-muted">&nbsp;&nbsp;SQLite</div>
+      `;
+      terminalScreen.appendChild(dbDiv);
+      terminalScreen.scrollTop = terminalScreen.scrollHeight;
+      
+      await sleep(1000);
+      dbDiv.remove();
+      printLine('<span class="text-secondary font-bold">✔</span> <span class="font-bold">Select Database:</span> <span class="text-primary">PostgreSQL</span>');
+      await sleep(600);
+
+      // Step 5: Prompt Add-ons
+      printLine('<span class="text-secondary font-bold">?</span> <span class="font-bold">Select Add-on Modules (Space to select, Enter to confirm):</span>');
+      const addonDiv = document.createElement('div');
+      addonDiv.className = 'space-y-1 pl-4';
+      addonDiv.innerHTML = `
+        <div id="add-auth" class="text-primary font-bold">&gt; [ ] Auth & Users (JWT, custom User model, registration)</div>
+        <div id="add-cache" class="text-muted">&nbsp;&nbsp;[ ] Caching & Performance (Redis, connection pooling)</div>
+        <div id="add-sec" class="text-muted">&nbsp;&nbsp;[ ] Security Hardening (Axes, TOTP 2FA, CSP headers)</div>
+        <div id="add-test" class="text-muted">&nbsp;&nbsp;[ ] Testing Infrastructure (pytest, coverage, factory-boy)</div>
+      `;
+      terminalScreen.appendChild(addonDiv);
+      terminalScreen.scrollTop = terminalScreen.scrollHeight;
+
+      // Select Auth
+      await sleep(800);
+      document.getElementById('add-auth').innerHTML = '&gt; [x] Auth & Users (JWT, custom User model, registration)';
+      
+      // Move to Cache and select
+      await sleep(600);
+      document.getElementById('add-auth').className = 'text-muted';
+      document.getElementById('add-auth').innerHTML = '&nbsp;&nbsp;[x] Auth & Users (JWT, custom User model, registration)';
+      document.getElementById('add-cache').className = 'text-primary font-bold';
+      document.getElementById('add-cache').innerHTML = '&gt; [ ] Caching & Performance (Redis, connection pooling)';
+      await sleep(500);
+      document.getElementById('add-cache').innerHTML = '&gt; [x] Caching & Performance (Redis, connection pooling)';
+
+      // Move to Testing and select
+      await sleep(600);
+      document.getElementById('add-cache').className = 'text-muted';
+      document.getElementById('add-cache').innerHTML = '&nbsp;&nbsp;[x] Caching & Performance (Redis, connection pooling)';
+      document.getElementById('add-test').className = 'text-primary font-bold';
+      document.getElementById('add-test').innerHTML = '&gt; [ ] Testing Infrastructure (pytest, coverage, factory-boy)';
+      await sleep(500);
+      document.getElementById('add-test').innerHTML = '&gt; [x] Testing Infrastructure (pytest, coverage, factory-boy)';
+
+      await sleep(800);
+      addonDiv.remove();
+      printLine('<span class="text-secondary font-bold">✔</span> <span class="font-bold">Select Add-on Modules:</span> <span class="text-primary">auth, cache, testing</span>');
+      await sleep(600);
+
+      // Step 6: Project Name
+      printLine('<span class="text-secondary font-bold">?</span> <span class="font-bold">Enter Project Name:</span> ', 'inline');
+      await typeText('cyber_api', 'inline-block');
+      printLine('');
+      await sleep(400);
+
+      // Step 7: Scaffolding Progress
+      printLine('\n<span class="text-tertiary font-bold">Scaffolding project \'cyber_api\' in \'./cyber_api\'...</span>');
+      printLine('Creating directory structure...', 'text-muted');
+      await sleep(400);
+      printLine('Injecting settings and configurations...', 'text-muted');
+      await sleep(400);
+
+      // Progress Bar
+      const progressDiv = document.createElement('div');
+      progressDiv.className = 'font-mono text-xs text-secondary';
+      terminalScreen.appendChild(progressDiv);
+      
+      for (let p = 0; p <= 100; p += 10) {
+        const barLength = Math.floor(p / 4);
+        const bar = '█'.repeat(barLength) + '░'.repeat(25 - barLength);
+        progressDiv.textContent = `[${bar}] ${p}% Generating settings...`;
+        terminalScreen.scrollTop = terminalScreen.scrollHeight;
+        await sleep(100 + Math.random() * 100);
+      }
+      
+      await sleep(300);
+      printLine('<span class="text-secondary font-bold">✔</span> Project created successfully!', 'font-bold');
+      printLine('<span class="text-secondary font-bold">✔</span> Dependencies installed via uv', 'font-bold');
+      printLine('<span class="text-secondary font-bold">✔</span> Git repository initialized', 'font-bold');
+      
+      await sleep(500);
+      printLine('\n<span class="text-primary font-bold">Ready to hack! Run \'cd cyber_api && ajo\' to start the Smart CLI.</span>');
+    }
+
+    function restartTerminalAnimation() {
+      // Clear all active timeouts
+      terminalTimeoutIds.forEach(id => clearTimeout(id));
+      terminalTimeoutIds = [];
+      runTerminalAnimation();
+    }
+
+    // Start terminal animation on load
+    window.addEventListener('DOMContentLoaded', () => {
+      runTerminalAnimation();
+    });
+
+    // Interactive Diagnostics Demo
+    let isDiagRunning = false;
+    const diagChecks = [
+      { name: 'Missing contrib apps in INSTALLED_APPS', desc: 'Scans settings.py for standard Django apps', status: 'warning', fix: 'Added missing contrib apps to INSTALLED_APPS' },
+      { name: 'Missing ALLOWED_HOSTS configuration', desc: 'Verifies host validation settings', status: 'warning', fix: 'Appended ["*"] to ALLOWED_HOSTS' },
+      { name: 'Hardcoded DEBUG=True in production', desc: 'Checks environment variable fallback', status: 'warning', fix: 'Wired DEBUG to env variable with False fallback' },
+      { name: 'Missing or placeholder SECRET_KEY', desc: 'Validates cryptographic key strength', status: 'warning', fix: 'Generated secure 50-character SECRET_KEY' }
+    ];
+
+    async function runDiagnosticsDemo() {
+      if (isDiagRunning) return;
+      isDiagRunning = true;
+
+      const runBtn = document.getElementById('run-diag-btn');
+      const diagStatus = document.getElementById('diag-status');
+      const checksList = document.getElementById('diag-checks-list');
+
+      runBtn.disabled = true;
+      runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      diagStatus.textContent = 'SCANNING...';
+      diagStatus.className = 'text-primary font-bold';
+
+      checksList.innerHTML = '';
+
+      for (let i = 0; i < diagChecks.length; i++) {
+        const check = diagChecks[i];
+        
+        // Render scanning state
+        const checkDiv = document.createElement('div');
+        checkDiv.className = 'flex items-start gap-3 text-primary';
+        checkDiv.innerHTML = `
+          <i data-lucide="loader-2" class="w-4 h-4 mt-0.5 flex-shrink-0 animate-spin"></i>
+          <div>
+            <p class="font-bold">Scanning: ${check.name}</p>
+            <p class="text-[10px] text-muted/70">${check.desc}</p>
+          </div>
+        `;
+        checksList.appendChild(checkDiv);
+        lucide.createIcons();
+        
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Render warning state
+        checkDiv.className = 'flex items-start gap-3 text-tertiary';
+        checkDiv.innerHTML = `
+          <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 flex-shrink-0 text-tertiary"></i>
+          <div>
+            <p class="font-bold">Issue Found: ${check.name}</p>
+            <p class="text-[10px] text-muted/70">${check.desc}</p>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+
+      diagStatus.textContent = '4 ISSUES DETECTED';
+      diagStatus.className = 'text-tertiary font-bold';
+
+      // Change button to Auto-Fix
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      runBtn.innerHTML = '<i data-lucide="wrench" class="w-4 h-4"></i><span>RUN AUTO-FIX</span>';
+      runBtn.onclick = runAutoFixDemo;
+      lucide.createIcons();
+      
+      isDiagRunning = false;
+    }
+
+    async function runAutoFixDemo() {
+      if (isDiagRunning) return;
+      isDiagRunning = true;
+
+      const runBtn = document.getElementById('run-diag-btn');
+      const diagStatus = document.getElementById('diag-status');
+      const checksList = document.getElementById('diag-checks-list');
+
+      runBtn.disabled = true;
+      runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      diagStatus.textContent = 'FIXING ISSUES...';
+      diagStatus.className = 'text-primary font-bold';
+
+      checksList.innerHTML = '';
+
+      for (let i = 0; i < diagChecks.length; i++) {
+        const check = diagChecks[i];
+        
+        // Render fixing state
+        const checkDiv = document.createElement('div');
+        checkDiv.className = 'flex items-start gap-3 text-primary';
+        checkDiv.innerHTML = `
+          <i data-lucide="loader-2" class="w-4 h-4 mt-0.5 flex-shrink-0 animate-spin"></i>
+          <div>
+            <p class="font-bold">Fixing: ${check.name}</p>
+            <p class="text-[10px] text-muted/70">${check.fix}</p>
+          </div>
+        `;
+        checksList.appendChild(checkDiv);
+        lucide.createIcons();
+        
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Render fixed state
+        checkDiv.className = 'flex items-start gap-3 text-secondary';
+        checkDiv.innerHTML = `
+          <i data-lucide="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0 text-secondary"></i>
+          <div>
+            <p class="font-bold">Fixed: ${check.name}</p>
+            <p class="text-[10px] text-secondary/70">${check.fix}</p>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+
+      diagStatus.textContent = 'SYSTEM HEALTHY';
+      diagStatus.className = 'text-secondary font-bold';
+
+      // Reset button to Diagnostics
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      runBtn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i><span>RUN DIAGNOSTICS</span>';
+      runBtn.onclick = runDiagnosticsDemo;
+      lucide.createIcons();
+
+      isDiagRunning = false;
+    }
+  </script>
+</body>
+</html>

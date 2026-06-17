@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ajo-cli"
-version = "3.0.1"
+version = "3.3.0"
 description = "Professional Django scaffolder with Cyberpunk TUI"
 readme = "README.md"
 license = "MIT"
