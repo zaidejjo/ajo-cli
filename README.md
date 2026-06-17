@@ -9,6 +9,10 @@
 <p align="center"><em>Professional Django Scaffolder with Cyberpunk TUI</em></p>
 
 <p align="center">
+  <a href="https://zaidejjo.github.io/ajo-cli/"><strong>🌐 Explore the Interactive Showcase & Web Simulator</strong></a>
+</p>
+
+<p align="center">
   <b>ajo</b> is an interactive CLI tool that generates production-ready Django projects
   with a beautiful cyberpunk-themed terminal UI. Pick your architecture, database,
   and add-on modules — ajo handles the rest.
@@ -36,6 +40,18 @@
 | **Bootstrap 5 Themes** — Pre-built UI themes | 🛠️ |
 | **Django Shell Plus** — Enhanced shell | 🔍 |
 | **Debug Toolbar** — Dev debugging tools | 🐙 |
+
+---
+
+## 🌐 Interactive Showcase & Web Simulator
+
+Experience AJO directly in your browser! We have built a dedicated single-page showcase website featuring:
+- **Interactive Terminal Simulator**: Watch a live, animated simulation of the `ajo` scaffolding workflow.
+- **Live Diagnostics Simulator**: Run a simulated scan of a Django project and watch the self-healing Diagnostic Engine fix issues with one click.
+- **Theme Switcher**: Cycle the site's accent colors between `Cyberpunk Cyan`, `Dracula Purple`, and `Monochromatic` to preview AJO's visual themes.
+- **Tabbed Installation Guide**: Easily copy installation commands for `pipx`, `uv`, `AUR`, or source.
+
+👉 **[Visit the Interactive Showcase Website](https://zaidejjo.github.io/ajo-cli/)**
 
 ---
 
