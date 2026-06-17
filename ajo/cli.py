@@ -1123,6 +1123,14 @@ def create_apps_loop(scaffolder):
             style=INQUIRER_STYLE,
         ).execute()
 
+        # Check if the app directory already exists
+        app_path = scaffolder.root_path / app_name
+        if app_path.exists():
+            console.print(
+                f"  [dim {Theme.MUTED}]❯[/] App '{app_name}' already exists. Skipping creation."
+            )
+            continue
+
         with Progress(
             SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
             TextColumn("[progress.description]{task.description}"),

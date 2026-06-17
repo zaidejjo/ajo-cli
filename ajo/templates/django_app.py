@@ -554,6 +554,14 @@ uv.lock
     def create_app(self, app_name: str) -> bool:
         """Create a new Django app."""
         try:
+            # Skip if the app directory already exists
+            app_dir = self.root_path / app_name
+            if app_dir.exists():
+                console.print(
+                    f"  [dim]❯[/] App '{app_name}' already exists. Skipping creation."
+                )
+                return True
+
             console.print(f"\n[cyan]📱 Creating app: {app_name}...[/cyan]")
 
             result = subprocess.run(
