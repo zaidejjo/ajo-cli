@@ -1,171 +1,130 @@
-"""Terminal capability detection for icon fallback.
+"""Terminal capability detection — unified wrapper around ``TerminalDetector``.
 
-Detects whether the terminal supports Nerd Font icon codepoints and
-provides a fallback mapping to safe Unicode / emoji alternatives.
+This module re-exports the core detection logic from
+:mod:`ajo.ui.terminal_detector` and maintains the backward-compatible
+``ICON_FALLBACK_MAP`` for older code paths.
+
+Usage::
+
+    from ajo.ui.capabilities import has_nerd_fonts, icon, ColorDepth
 """
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
-from typing import Final
+from typing import Any
 
-# ── Nerd Font fallback map ─────────────────────────────────────────────
-# Maps NF class attribute names to safe fallback characters (emoji/ASCII).
-# These are used when the terminal does not support Nerd Font patched
-# fonts.
+from ajo.ui.terminal_detector import (
+    ColorDepth,
+    TerminalCapabilities,
+    TerminalDetector,
+    TerminalType,
+)
 
-ICON_FALLBACK_MAP: Final[dict[str, str]] = {
-    # Brand & Technology
-    "PYTHON": "\U0001f40d",  # 🐍
-    "DJANGO": "\U0001f3af",  # 🎯
-    "UV": "\U0001f4e6",  # 📦
-    "RUFF": "\U0001f50d",  # 🔍
-    "GIT": "\U0001f500",  # 🔀
-    "GITHUB": "\U0001f419",  # 🐙
-    "DOCKER": "\U0001f433",  # 🐳
-    # Database
-    "DATABASE": "\U0001f5c4\ufe0f",  # 🗄️
-    "SQLITE": "\U0001f4be",  # 💾
-    "POSTGRES": "\U0001f418",  # 🐘
-    "MYSQL": "\U0001f42c",  # 🐬
-    # UI Elements
-    "ARROW_RIGHT": "\u25b6",  # ▶
-    "ARROW_DOWN": "\u25bc",  # ▼
-    "CHECK": "\u2713",  # ✓
-    "CHECK_CIRCLE": "\u2714",  # ✔
-    "ERROR": "\u2717",  # ✗
-    "ERROR_CIRCLE": "\u2718",  # ✘
-    "WARNING": "\u26a0",  # ⚠
-    "INFO": "\u2139",  # ℹ
-    "BULLET": "\u2022",  # •
-    # Actions
-    "ROCKET": "\U0001f680",  # 🚀
-    "GEAR": "\u2699",  # ⚙
-    "LOCK": "\U0001f512",  # 🔒
-    "LOCK_OPEN": "\U0001f513",  # 🔓
-    "GLOBE": "\U0001f310",  # 🌐
-    "HEART": "\u2665",  # ♥
-    "STAR": "\u2605",  # ★
-    "STAR_FILL": "\u2b50",  # ⭐
-    "CLOCK": "\u23f1",  # ⏱
-    "USER": "\U0001f464",  # 👤
-    "USERS": "\U0001f465",  # 👥
-    # Dev Tools
-    "TERMINAL": "\U0001f4bb",  # 💻
-    "SERVER": "\U0001f5a5",  # 🖥
-    "CODE": "\u2328",  # ⌨
-    "EDITOR": "\u270f\ufe0f",  # ✏️
-    "DEBUG": "\U0001f41b",  # 🐛
-    "TEST": "\U0001f9ea",  # 🧪
-    "SHELL": "\u2318",  # ⌘
-    "URL": "\U0001f517",  # 🔗
-    "CACHE": "\u26a1",  # ⚡
-    # File System
-    "FOLDER": "\U0001f4c1",  # 📁
-    "FOLDER_OPEN": "\U0001f4c2",  # 📂
-    "FILE": "\U0001f4c4",  # 📄
-    "FILE_CONFIG": "\u2699\ufe0f",  # ⚙️
-    "TRASH": "\U0001f5d1",  # 🗑
-    "SEARCH": "\U0001f50e",  # 🔎
-    # Django Specific
-    "APP": "\U0001f4f1",  # 📱
-    "MODEL": "\U0001f4cb",  # 📋
-    "MIGRATION": "\U0001f4e4",  # 📤
-    "STACK": "\U0001f4da",  # 📚
-    "SETTINGS": "\U0001f527",  # 🔧
-    # Status
-    "STATUS_SUCCESS": "\u2714",  # ✔
-    "STATUS_ERROR": "\u2718",  # ✘
-    "STATUS_WARNING": "\u26a0",  # ⚠
-    "STATUS_INFO": "\u2139",  # ℹ
-    "STATUS_RUNNING": "\U0001f504",  # 🔄
-    "STATUS_STOPPED": "\u23f9",  # ⏹
-}
+# ── Backward-compatible icon map ─────────────────────────────────────────
+# Code that still imports ICON_FALLBACK_MAP directly will get these.
+
+ICON_FALLBACK_MAP: dict[str, str] = dict(TerminalDetector.FALLBACK_ICONS)
+
+# ── Cached singleton capabilities ────────────────────────────────────────
+# Detected once on first access, then reused.
+
+_cached_caps: TerminalCapabilities | None = None
 
 
-# ── Detection ─────────────────────────────────────────────────────────
+def _get_caps() -> TerminalCapabilities:
+    """Return the cached :class:`TerminalCapabilities`, detecting if needed."""
+    global _cached_caps
+    if _cached_caps is None:
+        _cached_caps = TerminalDetector.detect()
+    return _cached_caps
 
 
-def _check_terminal_env() -> bool:
-    """Check environment variables for Nerd Font support.
+# ── Public API ───────────────────────────────────────────────────────────
 
-    Known Nerd Font-capable terminals are detected via environment
-    variables like ``TERM_PROGRAM``, ``TERM``, and ``XTERM_VERSION``.
+
+def detect_color_depth() -> ColorDepth:
+    """Return the detected :class:`ColorDepth`."""
+    return _get_caps().color_depth
+
+
+def detect_terminal_type() -> TerminalType:
+    """Return the detected :class:`TerminalType`."""
+    return _get_caps().terminal_type
+
+
+def has_nerd_fonts() -> bool:
+    """Return ``True`` if Nerd Fonts are available.
+
+    Checks the persistent config first (highest precedence), then falls
+    back to auto-detection via :class:`~ajo.ui.terminal_detector.TerminalDetector`.
     """
-    term_program = os.environ.get("TERM_PROGRAM", "")
-    term = os.environ.get("TERM", "")
-    alacritty_version = os.environ.get("ALACRITTY_VERSION", "")
-    vte_version = os.environ.get("VTE_VERSION", "")
-
-    # Known good terminals
-    if term_program in ("iTerm.app", "Hyper", "Tabby", "WarpTerminal", "WezTerm"):
-        return True
-    if alacritty_version:
-        return True
-    if "wezterm" in term.lower():
-        return True
-    if "kitty" in term.lower():
-        return True
-    if "foot" in term.lower():
-        return True
-
-    # VS Code's integrated terminal — supports Nerd Fonts when configured
-    if term_program == "vscode" and vte_version:
-        return True
-
-    return False
-
-
-def _check_nerd_font_rendering() -> bool:
-    """Check if the terminal likely supports Nerd Fonts.
-
-    Uses environment heuristics; on non-TTY or CI output falls back
-    to ``False``.
-    """
-    if not sys.stdout.isatty():
-        return False
-
-    # Try a quick tput check; if it fails, fall back to env heuristic
     try:
-        result = subprocess.run(
-            ["tput", "cols"],
-            capture_output=True,
-            text=True,
-            timeout=2,
-        )
-        if result.returncode != 0:
-            return _check_terminal_env()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return _check_terminal_env()
+        from ajo.core.config import get_config
 
-    return _check_terminal_env()
-
-
-def detect_nerd_font_support() -> bool:
-    """Determine whether the terminal supports Nerd Font icons.
-
-    Returns ``True`` if the terminal is known to support Nerd Fonts
-    (iTerm2, Kitty, Alacritty, WezTerm, etc.) and stdout is a TTY.
-
-    The result is memoized so repeated calls are cheap.
-    """
-    cache_attr = "_cached"
-    if not hasattr(detect_nerd_font_support, cache_attr):
-        setattr(detect_nerd_font_support, cache_attr, _check_nerd_font_rendering())
-    return getattr(detect_nerd_font_support, cache_attr)  # type: ignore[return-value]
+        config = get_config()
+        if config is not None:
+            pref = config.get("nerd_fonts")
+            if pref is True:
+                return True
+            if pref is False:
+                return False
+    except Exception:
+        pass
+    return _get_caps().supports_nerd_fonts
 
 
-def get_icon_fallback(attr_name: str, default: str = "?") -> str:
-    """Return the fallback character for a given NF attribute name.
+def has_true_color() -> bool:
+    """Return ``True`` if the terminal supports TrueColor (24-bit)."""
+    return _get_caps().color_depth == ColorDepth.TRUECOLOR
+
+
+def terminal_columns() -> int:
+    """Return the current terminal width (columns)."""
+    return _get_caps().columns
+
+
+def terminal_lines() -> int:
+    """Return the current terminal height (lines)."""
+    return _get_caps().lines
+
+
+def icon(name: str, *, fallback: str | None = None) -> str:
+    """Return the best icon for *name* given current terminal capabilities.
 
     Args:
-        attr_name: The attribute name from the :class:`NF` class
-            (e.g. ``"PYTHON"``, ``"DATABASE"``).
-        default: Character to return if no fallback is known.
+        name: The icon key (e.g. ``"folder"``, ``"python"``, ``"warning"``).
+        fallback: Optional override string if no icon is found.
 
     Returns:
-        A fallback character string.
+        A Nerd Font glyph if available, otherwise an emoji fallback.
     """
-    return ICON_FALLBACK_MAP.get(attr_name, default)
+    result = TerminalDetector.icon(name, _get_caps())
+    if result == "?" and fallback is not None:
+        return fallback
+    return result
+
+
+def select_icons(name: str) -> str:
+    """Alias for :func:`icon()` used by theme rendering."""
+    return icon(name)
+
+
+def get_full_report() -> dict[str, Any]:
+    """Return a human-readable dict of all detected capabilities."""
+    caps = _get_caps()
+    return {
+        "Color Depth": caps.color_depth.name,
+        "Terminal Type": caps.terminal_type.name,
+        "TTY": caps.is_tty,
+        "Unicode": caps.supports_unicode,
+        "Nerd Fonts": caps.supports_nerd_fonts,
+        "Sixel": caps.supports_sixel,
+        "Bracketed Paste": caps.supports_bracketed_paste,
+        "Hyperlinks": caps.supports_hyperlink,
+        "Columns": caps.columns,
+        "Lines": caps.lines,
+        "Cursor Shape": caps.cursor_shape_available,
+        "OSC 4": caps.osc4_supported,
+        "OSC 10": caps.osc10_supported,
+        "Reason": caps.colordepth_reason,
+    }

@@ -2,14 +2,19 @@
 
 Provides non-blocking wrappers for checking installation status,
 authentication state, and repository creation.
+
+All long-running operations (notably ``gh repo create``) have a
+``*_streaming`` variant that reports progress via a callback so the
+TUI can render a live progress bar.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 from shutil import which
+from typing import Callable
 
-from ajo.gateway.utils import _run_command
+from ajo.gateway.utils import _run_command, _run_command_streaming
 
 
 def gh_check_installed() -> bool:
@@ -46,8 +51,12 @@ async def gh_repo_create(
     path: Path,
     *,
     private: bool = False,
+    progress_callback: Callable[[int, str], None] | None = None,
 ) -> str:
     """Create a GitHub repository and push the local code to it.
+
+    When *progress_callback* is provided the error stream (where ``gh``
+    writes its progress) is piped to the callback line-by-line.
 
     Equivalent to::
 
@@ -59,26 +68,37 @@ async def gh_repo_create(
         path: Local project root (must be an initialised Git repository
             with at least one commit).
         private: Whether the repository should be private.
+        progress_callback: ``(line_number, line_text)`` called for
+            every line of stderr (where ``gh`` outputs progress).
 
     Returns:
-        The stdout from ``gh repo create``.
+        The combined stdout from ``gh repo create``.
 
     Raises:
         CommandExecutionError: If the ``gh`` command fails.
     """
     visibility = "--private" if private else "--public"
+    cmd = [
+        "gh",
+        "repo",
+        "create",
+        name,
+        "--source=.",
+        "--remote=origin",
+        visibility,
+        "--push",
+        "--yes",
+    ]
+
+    if progress_callback is not None:
+        return await _run_command_streaming(
+            cmd,
+            cwd=path,
+            description=f"gh repo create {name} ({'private' if private else 'public'})",
+            progress_callback=progress_callback,
+        )
     return await _run_command(
-        [
-            "gh",
-            "repo",
-            "create",
-            name,
-            "--source=.",
-            "--remote=origin",
-            visibility,
-            "--push",
-            "--yes",
-        ],
+        cmd,
         cwd=path,
         description=f"gh repo create {name} ({'private' if private else 'public'})",
     )

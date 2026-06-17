@@ -18,6 +18,7 @@ from rich.progress import (
 
 from ajo.utils import generate_secure_key, rollback_project, append_to_installed_apps
 from ajo.core.exceptions import CommandExecutionError
+from ajo.core.constants import icon
 
 console = Console()
 
@@ -554,6 +555,14 @@ uv.lock
     def create_app(self, app_name: str) -> bool:
         """Create a new Django app."""
         try:
+            # Skip if the app directory already exists
+            app_dir = self.root_path / app_name
+            if app_dir.exists():
+                console.print(
+                    f"  [dim]{icon('bullet')}[/] App '{app_name}' already exists. Skipping creation."
+                )
+                return True
+
             console.print(f"\n[cyan]📱 Creating app: {app_name}...[/cyan]")
 
             result = subprocess.run(

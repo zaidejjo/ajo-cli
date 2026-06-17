@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ajo = "ajo.cli:main"
+ajo = "ajo:main"
 
 [project.urls]
 Homepage = "https://github.com/zaidejjo/ajo-cli"
@@ -51,4 +51,10 @@ include = ["ajo*"]
 [tool.uv.workspace]
 members = [
     "zaid",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.0",
+    "pytest-asyncio>=1.4.0",
 ]

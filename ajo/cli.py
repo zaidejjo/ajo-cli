@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║                         AJO CLI - Professional Django Scaffolder              ║
-║                         Cyberpunk Edition · Enterprise Ready                  ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
+ajo CLI — Django project scaffolder with a modern TUI.
+
+Run without arguments for interactive mode.
+Use ``--help`` to see available options.
 """
+
+from __future__ import annotations
 
 import argparse
 import asyncio
@@ -12,97 +14,242 @@ import re
 import shutil
 import subprocess
 import sys
+from ctypes import pythonapi
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-# =============================================================================
-# THIRD-PARTY IMPORTS
-# =============================================================================
-
-try:
-    from InquirerPy import inquirer
-    from InquirerPy.base.control import Choice
-    from InquirerPy.separator import Separator
-    from InquirerPy.validator import ValidationError, Validator
-except ImportError:
-    print("❌ InquirerPy not installed. Run: uv pip install InquirerPy")
-    sys.exit(1)
-
-try:
-    from rich.console import Console
-    from rich.live import Live
-    from rich.panel import Panel
-    from rich.spinner import Spinner
-    from rich.table import Table
-    from rich.text import Text
-    from rich.progress import (
-        Progress,
-        SpinnerColumn,
-        TextColumn,
-        BarColumn,
-        TimeElapsedColumn,
-    )
-    from rich import box
-    from rich.align import Align
-    from rich.rule import Rule
-except ImportError:
-    print("❌ Rich not installed. Run: uv pip install rich")
-    sys.exit(1)
-
-# Local imports
+# Local imports (stdlib-only or very lightweight)
 from ajo import __version__
 from ajo.core.app import async_entry
-from ajo.core.constants import NF, Theme
+from ajo.core.constants import NF, Theme, ThemeVariant, icon, qmark
 from ajo.core.exceptions import AjoError, PresetError
-from ajo.detector import DjangoProjectDetector, SmartDjangoCLI, SmartCommand
-from ajo.detector.prereqs import check_uv_installed
-from ajo.presets import get_preset, list_presets
-from ajo.scaffolding import ScaffoldEngine
-from ajo.templates.django_app import DjangoProjectScaffolder
-from ajo.ui.theme import (
-    INQUIRER_STYLE,
-    command_urgency_style,
-    migration_label,
-    ruff_label,
-    server_label,
-    state_label,
-    venv_label,
-)
-from ajo.validators import ProjectNameValidator
 
-# Global console
-console = Console()
-
+# ── Lightweight stdlib / local imports only at module level ─────────────────
+# Rich and InquirerPy are loaded lazily via proxies below so that
+# ``import ajo.cli`` stays under 50ms.  See ``LazyImportTracker``.
+from ajo.core.lazy_imports import LazyImportTracker, lazy_attr
 
 # =============================================================================
-# CUSTOM VALIDATORS
+# LAZY PROXIES — Rich & InquirerPy loaded on first use
 # =============================================================================
+# We keep the same module-level names (``console``, ``inquirer``, ``Panel``,
+# etc.) so that every function in this file continues to work unchanged.
+# The proxies delay ``import rich`` / ``import InquirerPy`` until they are
+# actually accessed.
+
+_all_loaded: bool = False
 
 
-class AppNameValidator(Validator):
-    """Django app name validation."""
+def _ensure_rich_imported() -> None:
+    """One-shot import of all Rich and InquirerPy names used in this module.
 
-    PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
-    RESERVED = {"django", "test", "tests", "site", "admin", "config", "settings"}
+    Called automatically by every lazy proxy below before the first real
+    attribute access.  After the first call all subsequent accesses are
+    direct (no proxy overhead)."""
+    global _all_loaded
+    global inquirer, Choice, Separator, ValidationError, Validator
+    global Console, Live, Panel, Spinner
+    global Table, Text, Progress, SpinnerColumn, TextColumn
+    global BarColumn, TimeElapsedColumn, box, Align, Rule, escape
+    global INQUIRER_STYLE, console
+    global FileTreePreview, ThemeEngine
+    global command_urgency_style, migration_label, ruff_label
+    global server_label, state_label, venv_label
+    global DjangoProjectDetector, SmartDjangoCLI, SmartCommand
+    global check_uv_installed
+    global get_preset, list_presets
+    global ScaffoldEngine
+    global DjangoProjectScaffolder
+    global ProjectNameValidator, AppNameValidator
+    global _async_entry
 
-    def validate(self, document):
-        value = document.text.strip()
+    if _all_loaded:
+        return
 
-        if not value:
-            raise ValidationError("App name cannot be empty")
+    # Rich
+    RichConsole = lazy_attr("rich.console", "Console")
+    Live = lazy_attr("rich.live", "Live")
+    Panel = lazy_attr("rich.panel", "Panel")
+    Spinner = lazy_attr("rich.spinner", "Spinner")
+    Table = lazy_attr("rich.table", "Table")
+    Text = lazy_attr("rich.text", "Text")
+    Progress = lazy_attr("rich.progress", "Progress")
+    SpinnerColumn = lazy_attr("rich.progress", "SpinnerColumn")
+    TextColumn = lazy_attr("rich.progress", "TextColumn")
+    BarColumn = lazy_attr("rich.progress", "BarColumn")
+    TimeElapsedColumn = lazy_attr("rich.progress", "TimeElapsedColumn")
+    box = lazy_attr("rich", "box")
+    Align = lazy_attr("rich.align", "Align")
+    Rule = lazy_attr("rich.rule", "Rule")
+    escape = lazy_attr("rich.markup", "escape")
 
-        if len(value) < 2:
-            raise ValidationError("App name must be at least 2 characters")
+    # InquirerPy
+    import InquirerPy.inquirer as inquirer
 
-        if not self.PATTERN.match(value):
-            raise ValidationError(
-                "Use only letters and underscores. Must start with a letter."
-            )
+    Choice = lazy_attr("InquirerPy.base.control", "Choice")
+    Separator = lazy_attr("InquirerPy.separator", "Separator")
+    ValidationError = lazy_attr("InquirerPy.validator", "ValidationError")
+    Validator = lazy_attr("InquirerPy.validator", "Validator")
 
-        if value.lower() in self.RESERVED:
-            raise ValidationError(f"'{value}' is a reserved Django app name")
+    # Local (trigger theme / engine imports)
+    from ajo.ui.theme import (
+        INQUIRER_STYLE as _IS,
+    )
+    from ajo.ui.theme import (
+        FileTreePreview as _FTP,
+    )
+    from ajo.ui.theme import (
+        ThemeEngine as _TE,
+    )
+    from ajo.ui.theme import (
+        command_urgency_style as _cus,
+    )
+    from ajo.ui.theme import (
+        migration_label as _ml,
+    )
+    from ajo.ui.theme import (
+        ruff_label as _rl,
+    )
+    from ajo.ui.theme import (
+        server_label as _sl,
+    )
+    from ajo.ui.theme import (
+        state_label as _sl2,
+    )
+    from ajo.ui.theme import (
+        venv_label as _vl,
+    )
 
-        return True
+    INQUIRER_STYLE = _IS
+    FileTreePreview = _FTP
+    ThemeEngine = _TE
+    command_urgency_style = _cus
+    migration_label = _ml
+    ruff_label = _rl
+    server_label = _sl
+    state_label = _sl2
+    venv_label = _vl
+
+    from ajo.detector import DjangoProjectDetector as _DPD
+    from ajo.detector import SmartDjangoCLI as _SDC
+    from ajo.detector.prereqs import check_uv_installed as _cui
+    from ajo.presets import get_preset as _gp
+    from ajo.presets import list_presets as _lp
+    from ajo.scaffolding import ScaffoldEngine as _SE
+    from ajo.templates.django_app import DjangoProjectScaffolder as _DPS
+    from ajo.validators import ProjectNameValidator as _PNV
+
+    DjangoProjectDetector = _DPD
+    SmartDjangoCLI = _SDC
+    check_uv_installed = _cui
+    get_preset = _gp
+    list_presets = _lp
+    ScaffoldEngine = _SE
+    DjangoProjectScaffolder = _DPS
+    ProjectNameValidator = _PNV
+
+    # ── AppNameValidator (depends on InquirerPy Validator) ─────────
+    class _AppNameValidator(Validator):  # type: ignore[valid-type]
+        """Django app name validation."""
+
+        PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+        RESERVED = {"django", "test", "tests", "site", "admin", "config", "settings"}
+
+        def validate(self, document: Any) -> bool:  # type: ignore[override]
+            value = document.text.strip()
+
+            if not value:
+                raise ValidationError("App name cannot be empty")
+
+            if len(value) < 2:
+                raise ValidationError("App name must be at least 2 characters")
+
+            if not self.PATTERN.match(value):
+                raise ValidationError(
+                    "Use only letters and underscores. Must start with a letter."
+                )
+
+            if value.lower() in self.RESERVED:
+                raise ValidationError(f"'{value}' is a reserved Django app name")
+
+            return True
+
+    global AppNameValidator
+    AppNameValidator = _AppNameValidator
+
+    # Global console
+    console = RichConsole()
+    _all_loaded = True
+
+
+# ── Module-level replacements that trigger lazy loading ──────────────────
+
+
+class _LazyConsole:
+    """Proxy that calls ``_ensure_rich_imported()`` on first attribute access.
+
+    This lets us keep ``console.print(...)`` syntax unchanged.
+    """
+
+    _instance: Any = None
+
+    def __getattr__(self, name: str) -> Any:
+        if self._instance is None:
+            _ensure_rich_imported()
+            # After _ensure_rich_imported, the module-level ``console`` is
+            # replaced, so this proxy should never be called again.
+            # But just in case, delegate to the real console:
+            import sys as _sys
+
+            mod = _sys.modules[__name__]
+            self._instance = getattr(mod, "console", None)
+            if self._instance is None or self._instance is self:
+                raise RuntimeError("Lazy console not initialised")
+        return getattr(self._instance, name)
+
+
+# Module-level names initialised to lazy proxies.
+# After ``_ensure_rich_imported()`` these are overwritten with real objects.
+console: Any = _LazyConsole()
+inquirer: Any = None
+Choice: Any = None
+Separator: Any = None
+ValidationError: Any = None
+Validator: Any = None
+
+Console: Any = None
+Live: Any = None
+Panel: Any = None
+Spinner: Any = None
+Table: Any = None
+Text: Any = None
+Progress: Any = None
+SpinnerColumn: Any = None
+TextColumn: Any = None
+BarColumn: Any = None
+TimeElapsedColumn: Any = None
+box: Any = None
+Align: Any = None
+Rule: Any = None
+
+INQUIRER_STYLE: Any = None
+FileTreePreview: Any = None
+ThemeEngine: Any = None
+command_urgency_style: Any = None
+migration_label: Any = None
+ruff_label: Any = None
+server_label: Any = None
+state_label: Any = None
+venv_label: Any = None
+
+DjangoProjectDetector: Any = None
+SmartDjangoCLI: Any = None
+check_uv_installed: Any = None
+get_preset: Any = None
+list_presets: Any = None
+ScaffoldEngine: Any = None
+DjangoProjectScaffolder: Any = None
+ProjectNameValidator: Any = None
 
 
 # =============================================================================
@@ -116,110 +263,72 @@ def center(content, width: Optional[int] = None):
 
 
 def print_rule(title: str = "", style: str = Theme.MUTED):
-    """Print a horizontal rule."""
+    """Print a horizontal rule with optional title."""
     console.print(Rule(title=title, style=f"dim {style}"))
 
 
 def print_banner():
-    """Display animated cyberpunk banner."""
-    banner = """
-                ╔════════════════════════════════════════════════════╗
-                ║                                                    ║
-                ║              █████╗      ██╗ ██████╗               ║
-                ║             ██╔══██╗     ██║██╔═══██╗              ║
-                ║             ███████║     ██║██║   ██║              ║
-                ║             ██╔══██║██   ██║██║   ██║              ║
-                ║             ██║  ██║╚█████╔╝╚██████╔╝              ║
-                ║             ╚═╝  ╚═╝ ╚════╝  ╚═════╝               ║
-                ║                                                    ║
-                ╚════════════════════════════════════════════════════╝
-"""
+    """Display a clean, minimal header banner."""
+    from ajo import __version__
 
-    for line in banner.split("\n"):
-        if "█" in line or "╔" in line or "╚" in line:
-            console.print(f"[{Theme.SECONDARY}]{line}[/]")
-        elif "Professional" in line or "Cyberpunk" in line:
-            console.print(f"[bold {Theme.ACCENT}]{line}[/]")
-        elif line.strip():
-            console.print(f"[{Theme.MUTED}]{line}[/]")
-
-    # Tech badges
-    badges = f"""
-{center(f"[{Theme.SUCCESS}]{NF.PYTHON} Python 3.10+[/]  [{Theme.PRIMARY}]{NF.DJANGO} Django 5.0+[/]  [{Theme.SECONDARY}]{NF.UV} uv Package Manager[/]  [{Theme.ACCENT}]{NF.RUFF} Ruff Linter[/]")}
-"""
-    console.print(badges)
+    console.print()
+    console.print(Rule(style=f"dim {Theme.MUTED}"))
+    console.print(
+        f"  [bold {Theme.PRIMARY}]ajo[/]  [dim {Theme.MUTED}]v{__version__}[/]"
+        f"  —  [italic {Theme.SECONDARY}]Django Scaffolder[/]"
+    )
+    console.print(
+        f"  [{Theme.SUCCESS}]{NF.PYTHON} Python 3.10+[/]"
+        f"  [{Theme.PRIMARY}]{NF.DJANGO} Django 5.0+[/]"
+        f"  [{Theme.SECONDARY}]{NF.UV} uv[/]"
+        f"  [{Theme.ACCENT}]{NF.RUFF} Ruff[/]"
+    )
+    console.print(Rule(style=f"dim {Theme.MUTED}"))
     console.print()
 
 
 def show_error(title: str, message: str, suggestion: Optional[str] = None):
-    """Display error panel."""
-    content = Text()
-    content.append(f"\n  {NF.ERROR}  ", style=f"bold {Theme.ERROR}")
-    content.append(message, style=Theme.ERROR)
-
-    if suggestion:
-        content.append(f"\n\n  {NF.ARROW_RIGHT}  ", style=f"dim {Theme.MUTED}")
-        content.append(suggestion, style=f"italic {Theme.WARNING}")
-
-    panel = Panel(
-        content,
-        title=f"  {NF.ERROR}  {title}  ",
-        title_align="center",
-        border_style=Theme.ERROR,
-        padding=(1, 2),
+    """Display error message without nested panels."""
+    err_icon = icon("error")
+    bullet = icon("bullet")
+    console.print(
+        f"  [{Theme.ERROR}]{err_icon}[/] [bold {Theme.ERROR}]{escape(title)}[/]"
     )
-    console.print(center(panel))
+    console.print(f"    [{Theme.ERROR}]{escape(message)}[/]")
+    if suggestion:
+        console.print(
+            f"    [dim {Theme.MUTED}]{bullet}[/] [italic {Theme.WARNING}]{escape(suggestion)}[/]"
+        )
     console.print()
 
 
 def show_success(title: str, message: str):
-    """Display success panel."""
-    content = Text()
-    content.append(f"\n  {NF.CHECK}  ", style=f"bold {Theme.SUCCESS}")
-    content.append(message, style=Theme.SUCCESS)
-
-    panel = Panel(
-        content,
-        title=f"  {NF.CHECK}  {title}  ",
-        title_align="center",
-        border_style=Theme.SUCCESS,
-        padding=(1, 2),
+    """Display success message without nested panels."""
+    check = icon("check")
+    console.print(
+        f"  [{Theme.SUCCESS}]{check}[/] [bold {Theme.SUCCESS}]{escape(title)}[/]"
     )
-    console.print(center(panel))
+    console.print(f"    [{Theme.SUCCESS}]{escape(message)}[/]")
     console.print()
 
 
 def show_info(title: str, message: str):
-    """Display info panel."""
-    content = Text()
-    content.append(f"\n  {NF.INFO}  ", style=f"bold {Theme.PRIMARY}")
-    content.append(message, style=Theme.MUTED)
-
-    panel = Panel(
-        content,
-        title=f"  {NF.INFO}  {title}  ",
-        title_align="center",
-        border_style=Theme.SECONDARY,
-        padding=(1, 2),
+    """Display info message without nested panels."""
+    info_glyph = icon("info")
+    console.print(
+        f"  [{Theme.PRIMARY}]{info_glyph}[/] [bold {Theme.PRIMARY}]{escape(title)}[/]"
     )
-    console.print(center(panel))
+    console.print(f"    [{Theme.MUTED}]{escape(message)}[/]")
     console.print()
 
 
 def show_warning(title: str, message: str):
-    """Display warning panel."""
-    content = Text()
-    content.append(f"\n  {NF.WARNING}  ", style=f"bold {Theme.WARNING}")
-    content.append(message, style=Theme.WARNING)
-
-    panel = Panel(
-        content,
-        title=f"  {NF.WARNING}  {title}  ",
-        title_align="center",
-        border_style=Theme.WARNING,
-        padding=(1, 2),
+    """Display warning message without nested panels."""
+    warn_glyph = icon("warning")
+    console.print(
+        f"  [{Theme.WARNING}]{warn_glyph}[/] [bold {Theme.WARNING}]{escape(title)}[/]"
     )
-    console.print(center(panel))
+    console.print(f"    [{Theme.WARNING}]{escape(message)}[/]")
     console.print()
 
 
@@ -229,82 +338,74 @@ def show_warning(title: str, message: str):
 
 
 def show_features():
-    """Display feature grid."""
+    """Display feature overview with a clean, minimal layout."""
     console.print()
     print_rule("Features")
     console.print()
 
-    # Core features table
-    features_table = Table(
-        box=box.ROUNDED, border_style=Theme.BORDER, show_header=False
-    )
-    features_table.add_column("", style=Theme.ACCENT, width=4)
-    features_table.add_column("", style=Theme.PRIMARY, width=28)
-    features_table.add_column("", style=Theme.ACCENT, width=4)
-    features_table.add_column("", style=Theme.PRIMARY, width=28)
-
     features = [
-        (NF.DATABASE, "Multi-Database Support"),
-        (NF.GITHUB, "GitHub Integration"),
-        (NF.RUFF, "CI/CD with Ruff"),
-        (NF.LOCK, "Auto .env Security"),
-        (NF.APP, "Multiple Apps Support"),
-        (NF.TEST, "Testing Framework"),
-        (NF.DOCKER, "Docker Support"),
-        (NF.STACK, "Bootstrap 5 Themes"),
-        (NF.SHELL, "Django Shell Plus"),
-        (NF.DEBUG, "Debug Toolbar Ready"),
+        ("Multi-Database Support", "PostgreSQL, MySQL, SQLite"),
+        ("GitHub Integration", "Auto repo creation & push"),
+        ("CI/CD with Ruff", "GitHub Actions pipeline"),
+        (".env Security", "Auto-generated secrets"),
+        ("Multiple Apps", "Scaffold any number of apps"),
+        ("Testing", "pytest with coverage"),
+        ("Docker Support", "Dockerfile + compose"),
+        ("Bootstrap 5 Themes", "Pre-built UI themes"),
+        ("Django Shell Plus", "Enhanced shell"),
+        ("Debug Toolbar", "Dev debugging tools"),
     ]
 
+    bullet = icon("bullet")
+    plus = icon("plus")
     for i in range(0, len(features), 2):
-        icon1, text1 = features[i]
+        left_name, left_desc = features[i]
+        line = f"  [{Theme.PRIMARY}]{bullet}[/] [bold]{left_name}[/]  [dim {Theme.MUTED}]— {left_desc}[/]"
         if i + 1 < len(features):
-            icon2, text2 = features[i + 1]
-            features_table.add_row(f"  {icon1}  ", text1, f"  {icon2}  ", text2)
-        else:
-            features_table.add_row(f"  {icon1}  ", text1, "", "")
+            right_name, right_desc = features[i + 1]
+            padding = " " * max(1, 52 - len(left_name) - len(left_desc))
+            line += f"{padding}[{Theme.PRIMARY}]{bullet}[/] [bold]{right_name}[/]  [dim {Theme.MUTED}]— {right_desc}[/]"
+        console.print(line)
 
-    panel = Panel(
-        features_table,
-        title=f"  {NF.STAR}  Core Features  ",
-        title_align="center",
-        border_style=Theme.SECONDARY,
-    )
-    console.print(center(panel, width=90))
+    console.print()
+    print_rule("Architecture Presets")
     console.print()
 
-    # Architecture presets
-    arch_table = Table(box=box.ROUNDED, border_style=Theme.BORDER, show_header=True)
-    arch_table.add_column("Preset", style=f"bold {Theme.ACCENT}")
-    arch_table.add_column("Description", style=Theme.PRIMARY)
-    arch_table.add_column("Components", style=Theme.MUTED)
+    presets = [
+        (
+            "Standard Monolith",
+            "Traditional Django + templates",
+            "HTML + Bootstrap 5 + HTMX",
+        ),
+        ("REST API Ready", "DRF + CORS pre-configured", "DRF + JWT + Swagger"),
+        ("Ninja API", "django-ninja auto-generated API", "Swagger UI + Schemas"),
+        ("GraphQL API", "Graphene + Django", "GraphiQL + Relay"),
+        ("Full-Stack Modern", "Django + React / Vue / Alpine", "REST API + Frontend"),
+    ]
+    for name, desc, comps in presets:
+        console.print(f"  [{Theme.ACCENT}]{bullet}[/] [bold]{name}[/]")
+        console.print(
+            f"    [dim {Theme.MUTED}]{desc}[/]  —  [{Theme.SECONDARY}]{comps}[/]"
+        )
+    console.print()
 
-    arch_table.add_row(
-        f"{NF.STACK} Standard Monolith",
-        "Traditional Django with templates",
-        "HTML + Bootstrap 5 + HTMX",
-    )
-    arch_table.add_row(
-        f"{NF.ROCKET} REST API Ready",
-        "DRF + CORS pre-configured",
-        "DRF + JWT + CORS + Swagger",
-    )
-    arch_table.add_row(
-        f"{NF.CODE} GraphQL API", "Graphene + Django", "Graphene + GraphiQL + Relay"
-    )
-    arch_table.add_row(
-        f"{NF.SERVER} Full-Stack Modern",
-        "Django + React/Vue/Alpine",
-        "REST API + Frontend integration",
-    )
+    print_rule("Add-on Modules")
+    console.print()
 
-    panel = Panel(
-        arch_table,
-        title=f"  {NF.GEAR}  Architecture Presets  ",
-        title_align="center",
-        border_style=Theme.PRIMARY,
-    )
-    console.print(center(panel, width=90))
+    addons_list = [
+        ("Auth & Users", "JWT + registration + profile API"),
+        ("Caching & Performance", "Redis + connection pooling"),
+        ("Security Hardening", "Axes + 2FA + CSP headers"),
+        ("Testing Infrastructure", "pytest + coverage + factories"),
+    ]
+    for i in range(0, len(addons_list), 2):
+        left_name, left_desc = addons_list[i]
+        line = f"  [{Theme.ACCENT}]{plus}[/] [bold]{left_name}[/]  [dim {Theme.MUTED}]— {left_desc}[/]"
+        if i + 1 < len(addons_list):
+            right_name, right_desc = addons_list[i + 1]
+            padding = " " * max(1, 46 - len(left_name) - len(left_desc))
+            line += f"{padding}[{Theme.ACCENT}]{plus}[/] [bold]{right_name}[/]  [dim {Theme.MUTED}]— {right_desc}[/]"
+        console.print(line)
     console.print()
 
 
@@ -315,6 +416,7 @@ def show_features():
 
 def check_prerequisites() -> bool:
     """Check system prerequisites."""
+    bullet = icon("bullet")
     print_rule("System Prerequisites")
     console.print()
 
@@ -325,7 +427,7 @@ def check_prerequisites() -> bool:
         f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     )
     console.print(
-        f"  {NF.CHECK}  [{Theme.SUCCESS}]Python 3.10+{' ' * 12}[/] v{py_version}"
+        f"  [dim {Theme.MUTED}]{bullet}[/] [{Theme.SUCCESS}]Python 3.10+[/]  [dim {Theme.MUTED}]v{py_version}[/]"
     )
 
     # uv
@@ -335,16 +437,16 @@ def check_prerequisites() -> bool:
         uv_version = result.stdout.strip().split()[-1] if uv_ok else "Not found"
         if uv_ok:
             console.print(
-                f"  {NF.CHECK}  [{Theme.SUCCESS}]UV Package Manager{' ' * 7}[/] {uv_version}"
+                f"  [dim {Theme.MUTED}]{bullet}[/] [{Theme.SUCCESS}]uv[/]  [dim {Theme.MUTED}]{uv_version}[/]"
             )
         else:
             console.print(
-                f"  {NF.ERROR}  [{Theme.ERROR}]UV Package Manager{' ' * 7}[/] Not installed"
+                f"  [dim {Theme.MUTED}]{bullet}[/] [{Theme.ERROR}]uv[/]  [dim {Theme.MUTED}]Not installed[/]"
             )
             all_ok = False
     except FileNotFoundError:
         console.print(
-            f"  {NF.ERROR}  [{Theme.ERROR}]UV Package Manager{' ' * 7}[/] Not installed"
+            f"  [dim {Theme.MUTED}]{bullet}[/] [{Theme.ERROR}]uv[/]  [dim {Theme.MUTED}]Not installed[/]"
         )
         all_ok = False
 
@@ -354,10 +456,12 @@ def check_prerequisites() -> bool:
         git_version = (
             result.stdout.strip().split()[-1] if result.returncode == 0 else "Not found"
         )
-        console.print(f"  {NF.CHECK}  [{Theme.SUCCESS}]Git{' ' * 24}[/] {git_version}")
+        console.print(
+            f"  [dim {Theme.MUTED}]{bullet}[/] [{Theme.SUCCESS}]Git[/]  [dim {Theme.MUTED}]{git_version}[/]"
+        )
     except FileNotFoundError:
         console.print(
-            f"  {NF.INFO}  [{Theme.MUTED}]Git{' ' * 24}[/] Not installed (optional)"
+            f"  [dim {Theme.MUTED}]{bullet}[/] [dim {Theme.MUTED}]Git[/]  Not installed (optional)"
         )
 
     # GitHub CLI
@@ -366,15 +470,15 @@ def check_prerequisites() -> bool:
         if result.returncode == 0:
             gh_version = result.stdout.strip().split()[2]
             console.print(
-                f"  {NF.CHECK}  [{Theme.SUCCESS}]GitHub CLI{' ' * 18}[/] {gh_version}"
+                f"  [dim {Theme.MUTED}]{bullet}[/] [{Theme.SUCCESS}]GitHub CLI[/]  [dim {Theme.MUTED}]{gh_version}[/]"
             )
         else:
             console.print(
-                f"  {NF.INFO}  [{Theme.MUTED}]GitHub CLI{' ' * 18}[/] Not installed (optional)"
+                f"  [dim {Theme.MUTED}]{bullet}[/] [dim {Theme.MUTED}]GitHub CLI[/]  Not installed (optional)"
             )
     except FileNotFoundError:
         console.print(
-            f"  {NF.INFO}  [{Theme.MUTED}]GitHub CLI{' ' * 18}[/] Not installed (optional)"
+            f"  [dim {Theme.MUTED}]{bullet}[/] [dim {Theme.MUTED}]GitHub CLI[/]  Not installed (optional)"
         )
 
     console.print()
@@ -396,33 +500,31 @@ def check_prerequisites() -> bool:
 
 def select_database() -> Tuple[str, Dict]:
     """Interactive database selection."""
+    bullet = icon("bullet")
     console.print()
     print_rule("Database Configuration")
     console.print()
 
-    db_table = Table(box=box.ROUNDED, border_style=Theme.BORDER)
-    db_table.add_column("", style=Theme.ACCENT, width=4)
-    db_table.add_column("Database", style=f"bold {Theme.PRIMARY}")
-    db_table.add_column("Description", style=Theme.MUTED)
-
-    db_table.add_row(f"  {NF.SQLITE}  ", "SQLite", "Lightweight, file-based (default)")
-    db_table.add_row(
-        f"  {NF.POSTGRES}  ", "PostgreSQL", "Production-ready, feature-rich"
+    console.print(
+        f"  [dim {Theme.MUTED}]{bullet}[/] [bold {Theme.PRIMARY}]SQLite[/]        [dim {Theme.MUTED}]— Lightweight, file-based (default)[/]"
     )
-    db_table.add_row(f"  {NF.MYSQL}  ", "MySQL", "Popular, reliable")
-
-    console.print(center(Panel(db_table, border_style=Theme.SECONDARY), width=70))
+    console.print(
+        f"  [dim {Theme.MUTED}]{bullet}[/] [bold {Theme.PRIMARY}]PostgreSQL[/]    [dim {Theme.MUTED}]— Production-ready, feature-rich[/]"
+    )
+    console.print(
+        f"  [dim {Theme.MUTED}]{bullet}[/] [bold {Theme.PRIMARY}]MySQL[/]         [dim {Theme.MUTED}]— Popular, reliable[/]"
+    )
     console.print()
 
     db_choice = inquirer.select(
         message="Select your database:",
         choices=[
-            Choice(value="sqlite", name=f"{NF.SQLITE} SQLite - Development"),
-            Choice(value="postgresql", name=f"{NF.POSTGRES} PostgreSQL - Production"),
-            Choice(value="mysql", name=f"{NF.MYSQL} MySQL - Production"),
+            Choice(value="sqlite", name="SQLite — Development"),
+            Choice(value="postgresql", name="PostgreSQL — Production"),
+            Choice(value="mysql", name="MySQL — Production"),
         ],
         style=INQUIRER_STYLE,
-        qmark=f"{NF.ARROW_RIGHT}",
+        qmark=qmark(),
         default="sqlite",
     ).execute()
 
@@ -506,7 +608,7 @@ def setup_github(project_path: Path, project_name: str) -> bool:
     console.print()
 
     use_github = inquirer.confirm(
-        message=f"  {NF.GITHUB}  Create a GitHub repository?",
+        message="Create a GitHub repository?",
         default=False,
         style=INQUIRER_STYLE,
     ).execute()
@@ -536,8 +638,8 @@ def setup_github(project_path: Path, project_name: str) -> bool:
     visibility = inquirer.select(
         message="Repository visibility:",
         choices=[
-            Choice(value="public", name=f"{NF.GLOBE} Public - Anyone can see"),
-            Choice(value="private", name=f"{NF.LOCK} Private - Only you"),
+            Choice(value="public", name="Public — Anyone can see"),
+            Choice(value="private", name="Private — Only you"),
         ],
         style=INQUIRER_STYLE,
     ).execute()
@@ -548,7 +650,7 @@ def setup_github(project_path: Path, project_name: str) -> bool:
         console=console,
         transient=False,
     ) as progress:
-        task = progress.add_task(f"{NF.GITHUB} Creating repository...", total=None)
+        task = progress.add_task("Creating repository...", total=None)
 
         # Init git
         subprocess.run(["git", "init"], cwd=project_path, capture_output=True)
@@ -577,9 +679,7 @@ def setup_github(project_path: Path, project_name: str) -> bool:
         )
 
         if result.returncode == 0:
-            progress.update(
-                task, description=f"{NF.CHECK} Repository created!", completed=100
-            )
+            progress.update(task, description="Repository created", completed=100)
             return True
         else:
             progress.stop()
@@ -597,7 +697,7 @@ def setup_cicd(project_path: Path) -> bool:
     console.print()
 
     use_cicd = inquirer.confirm(
-        message=f"  {NF.RUFF}  Setup CI/CD with GitHub Actions?",
+        message="Setup CI/CD with GitHub Actions?",
         default=True,
         style=INQUIRER_STYLE,
     ).execute()
@@ -629,7 +729,7 @@ jobs:
       run: uv run ruff check .
     - name: Run Ruff formatter check
       run: uv run ruff format --check
-  
+
   test:
     runs-on: ubuntu-latest
     needs: lint
@@ -647,7 +747,7 @@ jobs:
       env:
         SECRET_KEY: "test-key-not-for-production"
         DEBUG: "False"
-  
+
   security:
     runs-on: ubuntu-latest
     steps:
@@ -694,51 +794,53 @@ class DashboardRenderer:
     # ── Rich renderable ──────────────────────────────────────────────
 
     def __rich__(self) -> Panel:
+        rocket = "󰑣"
+        branch = ""
+        python = ""
         info = self._detector.project_info
-        table = Table(box=box.ROUNDED, border_style=Theme.BORDER, show_header=False)
-        table.add_column("", style=Theme.ACCENT, width=20)
+        table = Table(
+            box=box.SIMPLE, border_style=Theme.MUTED, show_header=False, padding=(0, 1)
+        )
+        table.add_column("", style=Theme.ACCENT, width=18)
         table.add_column("", style=Theme.PRIMARY)
 
         # ── Project Meta ─────────────────────────────────────────────
-        table.add_row(f"{NF.FOLDER}  Project", str(info.get("project_name", "Unknown")))
-        table.add_row(f"{NF.GIT}  Branch", str(info.get("git_branch", "N/A")))
+        table.add_row(f"{rocket} Project", str(info.get("project_name", "Unknown")))
+        table.add_row(f"{branch} Branch", str(info.get("git_branch", "N/A")))
         table.add_row(
-            f"{NF.TERMINAL}  Venv", venv_label(info.get("venv_active", False))
+            f"{python} Virtual env", venv_label(info.get("venv_active", False))
         )
 
         table.add_row("", "")  # visual spacer
 
         # ── Live Status ──────────────────────────────────────────────
-        table.add_row(
-            f"{NF.SERVER}  Server", server_label(info.get("server_running", False))
-        )
-        table.add_row(f"{NF.APP}  Apps", str(len(info.get("apps", []))))
-        table.add_row(f"{NF.MODEL}  Models", str(info.get("models_count", 0)))
+        table.add_row("[dim]Server[/]", server_label(info.get("server_running", False)))
+        table.add_row("[dim]Apps[/]", str(len(info.get("apps", []))))
+        table.add_row("[dim]Models[/]", str(info.get("models_count", 0)))
 
         # ── Migrations (spinner until slow scan) ─────────────────────
         if self._slow_loaded:
             needs_mig = info.get("needs_migrations", False)
             unapplied = len(info.get("unapplied_migrations", []))
-            table.add_row(
-                f"{NF.MIGRATION}  Migrations", migration_label(needs_mig, unapplied)
-            )
+            table.add_row("[dim]Migrations[/]", migration_label(needs_mig, unapplied))
         else:
-            table.add_row(f"{NF.MIGRATION}  Migrations", self._spinner_mig)
+            table.add_row("[dim]Migrations[/]", self._spinner_mig)
 
         # ── Ruff lint status (spinner until slow scan) ───────────────
         ruff = info.get("ruff_result")
         if self._slow_loaded:
             exit_code = ruff.exit_code if ruff else None
             line_count = ruff.line_count if ruff else 0
-            table.add_row(f"{NF.RUFF}  Ruff Lint", ruff_label(exit_code, line_count))
+            table.add_row("[dim]Ruff[/]", ruff_label(exit_code, line_count))
         else:
-            table.add_row(f"{NF.RUFF}  Ruff Lint", self._spinner_ruff)
+            table.add_row("[dim]Ruff[/]", self._spinner_ruff)
 
         return Panel(
             table,
-            title=f"  {NF.SETTINGS}  Django Project Dashboard  ",
-            title_align="center",
-            border_style=Theme.PRIMARY,
+            title=" Django Project ",
+            title_align="left",
+            border_style=Theme.MUTED,
+            padding=(0, 1),
         )
 
 
@@ -779,6 +881,70 @@ async def show_dashboard(detector: DjangoProjectDetector) -> bool:
         return False
 
     return True
+
+
+# =============================================================================
+# DIAGNOSTIC DASHBOARD
+# =============================================================================
+
+
+async def show_diagnostics(detector: DjangoProjectDetector) -> None:
+    """Run the self-healing diagnostic engine and display issues.
+
+    Uses :class:`~ajo.validators.DiagnosticEngine` to scan the project
+    for common misconfigurations.  For each discoverable issue the user
+    is offered an **Auto-Fix** option.
+
+    Args:
+        detector: An initialised :class:`DjangoProjectDetector` whose
+            ``path`` attribute points to the project root.
+    """
+    # Lazy import for startup performance
+    from ajo.validators import DiagnosticEngine
+
+    engine = DiagnosticEngine(detector.path)
+    issues = engine.run_full_diagnostic()
+
+    if not issues:
+        show_success("System Healthy", "No issues detected")
+        return
+
+    console.print()
+    print_rule(f"Diagnostics ({len(issues)} issue{'s' if len(issues) != 1 else ''})")
+    console.print()
+
+    for i, issue in enumerate(issues, 1):
+        color = (
+            Theme.ERROR
+            if issue.severity == "error"
+            else (Theme.WARNING if issue.severity == "warning" else Theme.PRIMARY)
+        )
+        label = issue.severity.upper()
+
+        console.print(f"  {i:2d}. [{color}][{label}][/]  {issue.message}")
+
+        if issue.auto_fix and issue.fix_description:
+            from InquirerPy import inquirer as _diag_inquirer
+
+            fix = _diag_inquirer.confirm(
+                message=f"     Auto-fix: {issue.fix_description}?",
+                default=True,
+                style=INQUIRER_STYLE,
+            ).execute()
+
+            if fix:
+                success = issue.auto_fix()
+                if success:
+                    show_success("Fixed", issue.fix_description)
+                else:
+                    show_error("Fix Failed", f"Could not {issue.fix_description}")
+
+    console.print()
+    show_info(
+        "Diagnostics Complete",
+        f"Resolved {sum(1 for i in issues if i.auto_fix)} issue(s). "
+        f"Run diagnostics again to re-check.",
+    )
 
 
 # =============================================================================
@@ -867,8 +1033,8 @@ async def _run_interactive(action: str, project_path: Path) -> bool:
     instead of crashing.
     """
     cmd = ["uv", "run", "python", "manage.py", action]
-    console.print(f"\n[{Theme.PRIMARY}]{NF.TERMINAL} Starting[/] [bold]{action}[/] ...")
-    console.print(f"[{Theme.MUTED}]{'─' * 40}[/]")
+    console.print(f"\n[{Theme.PRIMARY}]Starting[/] [bold]{action}[/] ...")
+    console.print(f"[dim {Theme.MUTED}]{'─' * 40}[/]")
     console.print(
         f"[italic {Theme.MUTED}]Press Ctrl+C to stop and return to the menu.[/]"
     )
@@ -927,7 +1093,7 @@ async def _run_subprocess(
         transient=True,
     ) as progress:
         task = progress.add_task(
-            f"{NF.TERMINAL}  {description or ' '.join(cmd)}...",
+            f"{description or ' '.join(cmd)}...",
             total=None,
         )
 
@@ -949,18 +1115,13 @@ async def _run_subprocess(
         if proc.returncode == 0:
             progress.update(
                 task,
-                description=f"{NF.CHECK}  {description or ' '.join(cmd)} completed",
+                description=f"{description or ' '.join(cmd)} completed",
             )
-            if stdout_text:
-                # Print output after spinner is cleaned up
-                pass  # We print outside the progress context
         else:
             progress.update(
                 task,
-                description=f"{NF.ERROR}  {description or ' '.join(cmd)} failed (exit {proc.returncode})",
+                description=f"{description or ' '.join(cmd)} failed (exit {proc.returncode})",
             )
-            if stderr_text:
-                pass  # We print outside the progress context
 
     # Print output / errors after progress is gone
     if proc.returncode == 0:
@@ -987,7 +1148,7 @@ def create_apps_loop(scaffolder):
     while True:
         console.print()
         add_app = inquirer.confirm(
-            message=f"  {NF.APP}  Create a new Django app?",
+            message="Create a new Django app?",
             default=False,
             style=INQUIRER_STYLE,
         ).execute()
@@ -1002,6 +1163,14 @@ def create_apps_loop(scaffolder):
             style=INQUIRER_STYLE,
         ).execute()
 
+        # Check if the app directory already exists
+        app_path = scaffolder.root_path / app_name
+        if app_path.exists():
+            console.print(
+                f"  [dim {Theme.MUTED}]{icon('bullet')}[/] App '{app_name}' already exists. Skipping creation."
+            )
+            continue
+
         with Progress(
             SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
             TextColumn("[progress.description]{task.description}"),
@@ -1014,7 +1183,7 @@ def create_apps_loop(scaffolder):
                 apps.append(app_name)
                 progress.update(
                     task,
-                    description=f"{NF.CHECK} App '{app_name}' created!",
+                    description=f"App '{app_name}' created",
                     completed=100,
                 )
             else:
@@ -1032,51 +1201,45 @@ def create_apps_loop(scaffolder):
 def show_completion(
     project_name: str, db_type: str, github_created: bool, apps: List[str]
 ):
-    """Show completion panel."""
+    """Show completion summary with next steps."""
+    bullet = icon("bullet")
+    check = icon("check")
+    db_icon = icon("database")
     console.print()
     print_rule("Setup Complete!")
     console.print()
 
-    # Summary table
-    summary = Table(box=box.ROUNDED, border_style=Theme.SUCCESS, show_header=False)
-    summary.add_column("", style=Theme.ACCENT, width=12)
-    summary.add_column("", style=Theme.SUCCESS)
-
-    summary.add_row(f"{NF.DATABASE} Database", db_type.upper())
-    summary.add_row(f"{NF.GITHUB} GitHub", "Created" if github_created else "Skipped")
-    if apps:
-        summary.add_row(f"{NF.APP} Apps", ", ".join(apps))
-
-    panel = Panel(
-        summary,
-        title=f"  {NF.CHECK_CIRCLE}  Project Created Successfully  {NF.CHECK_CIRCLE}  ",
-        title_align="center",
-        border_style=Theme.SUCCESS,
+    console.print(
+        f"  [dim {Theme.MUTED}]{bullet}[/] [{Theme.SUCCESS}]Database:[/]  "
+        f"{db_icon} [bold]{db_type.upper()}[/]"
     )
-    console.print(center(panel, width=70))
+    gh_status = f"{check} Created" if github_created else f"{icon('error')} Skipped"
+    console.print(
+        f"  [dim {Theme.MUTED}]{bullet}[/] [{Theme.SUCCESS}]GitHub:[/]    {gh_status}"
+    )
+    if apps:
+        console.print(
+            f"  [dim {Theme.MUTED}]{bullet}[/] [{Theme.SUCCESS}]Apps:[/]      {', '.join(apps)}"
+        )
     console.print()
 
     # Next steps
-    console.print(f"[bold {Theme.PRIMARY}]Next Steps:[/]")
+    print_rule("Next Steps")
     console.print()
-
-    steps = Table(box=box.ROUNDED, border_style=Theme.BORDER, show_header=False)
-    steps.add_column("", style=Theme.ACCENT, width=4)
-    steps.add_column("Command", style=f"bold {Theme.PRIMARY}")
-    steps.add_column("Description", style=Theme.MUTED)
-
-    for icon, cmd, desc in [
-        (NF.FOLDER, f"cd {project_name}", "Enter project directory"),
-        (NF.UV, "uv sync", "Install dependencies"),
-        (NF.DATABASE, "uv run manage.py migrate", "Apply migrations"),
-        (NF.USER, "uv run manage.py createsuperuser", "Create admin account"),
-        (NF.SERVER, "uv run manage.py runserver", "Start development server"),
-    ]:
-        steps.add_row(f"  {icon}  ", cmd, desc)
-
-    console.print(steps)
+    steps = [
+        (f"cd {project_name}", "Enter project directory"),
+        ("uv sync", "Install dependencies"),
+        ("uv run manage.py migrate", "Apply migrations"),
+        ("uv run manage.py createsuperuser", "Create admin account"),
+        ("uv run manage.py runserver", "Start development server"),
+    ]
+    for cmd, desc in steps:
+        console.print(
+            f"  [dim {Theme.MUTED}]{bullet}[/] [bold {Theme.PRIMARY}]{cmd}[/]"
+        )
+        console.print(f"    [dim {Theme.MUTED}]{desc}[/]")
     console.print()
-    console.print(center(f"[bold {Theme.PRIMARY}]➜ http://127.0.0.1:8000[/]"))
+    console.print(f"  [bold {Theme.PRIMARY}]➜ http://127.0.0.1:8000[/]")
     console.print()
 
 
@@ -1123,6 +1286,8 @@ def build_parser() -> argparse.ArgumentParser:
             "monolith",
             "rest-api",
             "rest",
+            "ninja-api",
+            "ninja",
             "graphql-api",
             "graphql",
             "docker",
@@ -1161,6 +1326,26 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path.cwd(),
         help="Parent directory for the project (default: current dir)",
     )
+    parser.add_argument(
+        "--theme",
+        type=str,
+        choices=["cyberpunk", "dracula", "monochromatic", "mono"],
+        default="cyberpunk",
+        help="Visual theme (default: cyberpunk)",
+    )
+    parser.add_argument(
+        "--addons",
+        type=str,
+        nargs="*",
+        default=None,
+        help="Add-on modules to include (e.g. auth cache security testing)",
+    )
+    parser.add_argument(
+        "--no-addons",
+        action="store_true",
+        dest="no_addons",
+        help="Skip all add-on modules",
+    )
     return parser
 
 
@@ -1189,6 +1374,8 @@ async def _headless_execute(args: argparse.Namespace) -> int:
         "monolith": "monolith",
         "rest-api": "rest-api",
         "rest": "rest-api",
+        "ninja-api": "ninja-api",
+        "ninja": "ninja-api",
         "graphql-api": "graphql-api",
         "graphql": "graphql-api",
         "docker": "docker",
@@ -1233,21 +1420,56 @@ async def _headless_execute(args: argparse.Namespace) -> int:
         "project_name": project_name,
         "db_type": args.database,
         "db_config": db_config,
+        "preset_key": preset_key,
     }
 
-    # 5. Execution
+    # 5. Add-on Resolution
+    addons: list[Any] | None = None
+    if args.no_addons:
+        addons = None
+    elif args.addons is not None:
+        from ajo.presets.addons import resolve_addons
+
+        try:
+            addons = resolve_addons(args.addons, preset_key=preset_key)
+        except PresetError as e:
+            show_error("Add-on Error", str(e))
+            return 1
+    # If neither --addons nor --no-addons is specified, prompt in headless
+    # only when --yes is not set (interactive headless).  When --yes is set
+    # we skip addons entirely to maintain a fully-automated flow.
+    elif not args.yes:
+        from ajo.presets.addons import get_addon_choices
+
+        choices = get_addon_choices(preset_key=preset_key)
+        if choices:
+            console.print()
+            print_rule("Add-on Modules")
+            console.print()
+            console.print(
+                f"  [dim {Theme.MUTED}]Extra feature modules to layer on top of the preset.[/]"
+            )
+            console.print(
+                f"  [dim {Theme.MUTED}]Available: {', '.join(sorted(choices))}[/]"
+            )
+            console.print()
+
+    # 6. Execution
     project_path = args.output_dir / project_name
     console.print(
-        f"\n[bold {Theme.PRIMARY}]🚀 Starting headless scaffold for '{project_name}'...[/]"
+        f"\n[bold {Theme.PRIMARY}]Starting headless scaffold for '{project_name}'...[/]"
     )
-    console.print(f"  Preset: {preset_key} | Database: {args.database}\n")
+    console.print(f"  Preset: {preset_key} | Database: {args.database}")
+    if addons:
+        console.print(f"  Add-ons: {', '.join(a.name for a in addons)}")
+    console.print()
 
     try:
         preset_cls = get_preset(preset_key)
         preset_instance = preset_cls()
 
         engine = ScaffoldEngine(project_path, env_config=env_config)
-        success = await engine.execute(preset=preset_instance)
+        success = await engine.execute(preset=preset_instance, addons=addons)
 
         if not success:
             show_error(
@@ -1255,18 +1477,27 @@ async def _headless_execute(args: argparse.Namespace) -> int:
             )
             return 1
 
-        # 6. Completion Summary (Clean output for CI/CD)
+        # 7. Completion Summary (Clean output for CI/CD)
         console.print()
+        bullet = icon("bullet")
         print_rule("Setup Complete", style=Theme.SUCCESS)
         console.print(
-            f"  {NF.CHECK}  Project created successfully at: [bold]{project_path}[/]"
+            f"  [dim {Theme.MUTED}]{bullet}[/] Project created at: [bold]{project_path}[/]"
         )
-        console.print(f"  {NF.CHECK}  Architecture: {preset_instance.name}")
-        console.print(f"  {NF.CHECK}  Database: {args.database.upper()}")
+        console.print(
+            f"  [dim {Theme.MUTED}]{bullet}[/] Architecture: {preset_instance.name}"
+        )
+        console.print(
+            f"  [dim {Theme.MUTED}]{bullet}[/] Database: {args.database.upper()}"
+        )
+        if addons:
+            console.print(
+                f"  [dim {Theme.MUTED}]{bullet}[/] Add-ons: {', '.join(a.name for a in addons)}"
+            )
         if args.no_github:
-            console.print(f"  {NF.INFO}  GitHub setup skipped")
+            console.print(f"  [dim {Theme.MUTED}]{bullet}[/] GitHub setup: skipped")
         if args.no_cicd:
-            console.print(f"  {NF.INFO}  CI/CD setup skipped")
+            console.print(f"  [dim {Theme.MUTED}]{bullet}[/] CI/CD setup: skipped")
         console.print()
         console.print(f"[bold {Theme.PRIMARY}]Next steps:[/]")
         console.print(
@@ -1301,9 +1532,17 @@ def _parse_args() -> argparse.Namespace | int | None:
     args = parser.parse_args()
 
     # ── Version fast-path ────────────────────────────────────────────────
+    # Use raw ``print()`` here — Rich console is NOT loaded at this point
+    # when running --version or --help, ensuring startup stays under 50ms.
     if args.version:
-        console.print(f"ajo v{__version__}")
+        print(f"ajo v{__version__}")
         return None
+
+    # ── Ensure lazy (Rich / InquirerPy) imports are loaded ──────────────
+    # From this point forward, all module-level names (console, inquirer,
+    # Panel, ThemeEngine, etc.) will have their real values.
+    # This call is idempotent and costs ~0 after the first invocation.
+    _ensure_rich_imported()
 
     # ── Headless mode validation ──────────────────────────────────────────
     if args.headless or args.yes:
@@ -1320,12 +1559,41 @@ async def _async_main() -> int:
 
     Handles both the interactive TUI and the non-interactive headless mode.
     """
+    rocket = icon("rocket")
+    dj = icon("django")
+    api = icon("󱂛")
+    ninja = icon("󰝴")
+
     result = _parse_args()
     if result is None:
         return 0  # --version
     if isinstance(result, int):
         return result  # Validation error
     args = result
+
+    # ── Theme Engine initialisation ──────────────────────────────────────
+    engine = ThemeEngine.get_instance()
+    engine.set_theme(ThemeVariant.from_string(args.theme))
+    engine.adapt_to_depth()
+    # Rebuild INQUIRER_STYLE from the active theme
+    global INQUIRER_STYLE
+    INQUIRER_STYLE = engine.get_inquirer_style()
+
+    # ── Config initialisation ────────────────────────────────────────────
+    from ajo.core.config import ConfigManager
+
+    config = ConfigManager()
+
+    # ── First-time Nerd Font prompt (interactive only) ───────────────────
+    if config.is_first_run() and not (args.headless or args.yes):
+        console.print()
+        nerd_font = inquirer.confirm(
+            message="Do you use a Nerd Font in your terminal?",
+            default=False,
+            style=INQUIRER_STYLE,
+            qmark="?",
+        ).execute()
+        config.set("nerd_fonts", nerd_font, auto_save=True)
 
     # ── Headless / Automated Mode ────────────────────────────────────────
     if args.headless or args.yes:
@@ -1348,33 +1616,36 @@ async def _async_main() -> int:
             for cmd in smart_commands:
                 urgency = cmd.urgency
                 style_tag = command_urgency_style(urgency)
-                name_parts = []
-                if cmd.icon:
-                    name_parts.append(cmd.icon)
                 if style_tag:
-                    name_parts.append(f"[{style_tag}]{cmd.name}[/]")
+                    name_str = f"  [{style_tag}]{cmd.name}[/]"
                 else:
-                    name_parts.append(cmd.name)
-                name_str = "  ".join(name_parts)
-                choices.append(Choice(value=cmd.action, name=f"  {name_str}"))
+                    name_str = f"  {cmd.name}"
+                choices.append(Choice(value=cmd.action, name=name_str))
 
             choices.append(Separator())
             choices.append(
-                Choice(value="new_project", name=f"  {NF.ROCKET}  Create New Project")
+                Choice(
+                    value="diagnostics",
+                    name="  Run Diagnostics",
+                )
             )
-            choices.append(Choice(value="exit", name=f"  {NF.ERROR}  Exit"))
+            choices.append(Choice(value="new_project", name="  Create New Project"))
+            choices.append(Choice(value="exit", name="  Exit"))
 
             action = inquirer.select(
                 message="What would you like to do?",
                 choices=choices,
                 style=INQUIRER_STYLE,
-                qmark=f"{NF.ARROW_RIGHT}",
+                qmark=qmark(),
             ).execute()
 
             if action == "exit":
                 return 0
             elif action == "new_project":
                 pass
+            elif action == "diagnostics":
+                await show_diagnostics(detector)
+                return 0
             else:
                 success = await run_command_async(action, Path.cwd())
                 return 0 if success else 1
@@ -1389,7 +1660,7 @@ async def _async_main() -> int:
         console.print()
 
         project_name = inquirer.text(
-            message=f"Project name:[/]",
+            message=f"{rocket} Project name:[/]",
             long_instruction="\n   └── Example: my_blog, awesome-project, django_app",
             validate=lambda x: len(x.strip()) > 0,
             style=INQUIRER_STYLE,
@@ -1398,21 +1669,25 @@ async def _async_main() -> int:
 
         console.print()
         console.print(
-            f"  {NF.CHECK}  [{Theme.SUCCESS}]Project:[/] [bold {Theme.PRIMARY}]{project_name}[/]"
+            f"  [dim {Theme.MUTED}]{icon('bullet')}[/] [{Theme.SUCCESS}]Project:[/] [bold {Theme.PRIMARY}]{project_name}[/]"
         )
         console.print()
 
         # Architecture preset
         preset = inquirer.select(
-            message=f"[bold {Theme.PRIMARY}]{NF.ARROW_RIGHT}  Architecture preset:[/]",
+            message="Architecture preset:",
             choices=[
                 Choice(
                     value="Standard Monolith",
-                    name=f"{NF.STACK} Standard Monolith - Traditional Django",
+                    name=f" {dj} Standard Monolith — Traditional Django",
                 ),
                 Choice(
                     value="REST API Ready",
-                    name=f"{NF.ROCKET} REST API Ready - DRF + CORS",
+                    name=f"{api} {dj} REST API Ready — DRF + CORS + Swagger",
+                ),
+                Choice(
+                    value="Ninja API",
+                    name=f"{ninja} {dj} Ninja API — django-ninja + Swagger UI",
                 ),
             ],
             style=INQUIRER_STYLE,
@@ -1423,6 +1698,89 @@ async def _async_main() -> int:
         # Database
         db_type, db_config = select_database()
 
+        # ── Add-on modules selection ─────────────────────────────────────
+        from ajo.presets.addons import get_addon_choices as _get_addon_choices
+        from ajo.presets.addons import resolve_addons as _resolve_addons
+
+        _preset_key = "monolith"
+        if preset == "REST API Ready":
+            _preset_key = "rest-api"
+        elif preset == "Ninja API":
+            _preset_key = "ninja-api"
+
+        _addon_choices = _get_addon_choices(preset_key=_preset_key)
+        _selected_addon_keys: list[str] = []
+        _addon_instances: list[Any] = []
+        if _addon_choices:
+            console.print()
+            print_rule("Add-on Modules")
+            console.print()
+            console.print(
+                f"  [dim {Theme.MUTED}]Optional feature modules to layer on your project.[/]"
+            )
+            console.print()
+
+            _choice_objects = [
+                Choice(
+                    value=key,
+                    name=f"  {info['name']}  [dim {Theme.MUTED}]— {info['description']}[/]",
+                )
+                for key, info in _addon_choices.items()
+            ]
+            _selected_addon_keys = inquirer.checkbox(
+                message="Select add-on modules (space to toggle):",
+                choices=_choice_objects,
+                style=INQUIRER_STYLE,
+                qmark=qmark(),
+                cycle=False,
+            ).execute()
+
+        # ── Scaffold preview ────────────────────────────────────────────
+        from ajo.presets import get_preset as _get_preset
+
+        console.print()
+        print_rule("Scaffold Preview")
+        console.print()
+
+        _preset_cls = _get_preset(_preset_key)
+        _preset_instance = _preset_cls()
+
+        _preview_files: list[tuple[str, int]] = [
+            (f"{project_name}/", 0),
+            (f"{project_name}/.env", 512),
+            (f"{project_name}/.gitignore", 256),
+            (f"{project_name}/pyproject.toml", 1024),
+        ]
+
+        for _rel_path, _size in _preset_instance.preview_files:
+            _preview_files.append((f"{project_name}/{_rel_path}", _size))
+
+        # Add add-on preview files
+        if _selected_addon_keys:
+            _addon_instances = _resolve_addons(
+                _selected_addon_keys, preset_key=_preset_key
+            )
+            for _addon in _addon_instances:
+                _addon_files = getattr(_addon, "preview_files", None)
+                if _addon_files is not None:
+                    for _rel_path, _size in _addon_files:
+                        _preview_files.append((f"{project_name}/{_rel_path}", _size))
+
+        preview = FileTreePreview()
+        tree = preview.build(_preview_files, title="Files to be created")
+        console.print(tree)
+        console.print()
+
+        confirm = inquirer.confirm(
+            message="Proceed with scaffold?",
+            default=True,
+            style=INQUIRER_STYLE,
+        ).execute()
+
+        if not confirm:
+            show_warning("Cancelled", "Scaffold cancelled by user")
+            return 0
+
         # Create project
         with Progress(
             SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
@@ -1432,9 +1790,7 @@ async def _async_main() -> int:
             console=console,
             transient=False,
         ) as progress:
-            task = progress.add_task(
-                f"{NF.DJANGO} Creating Django project...", total=None
-            )
+            task = progress.add_task("Creating Django project...", total=None)
 
             scaffolder = DjangoProjectScaffolder(
                 project_name, preset, db_type, db_config
@@ -1443,6 +1799,42 @@ async def _async_main() -> int:
                 return 1
 
             progress.update(task, completed=100)
+
+        # ── Apply add-on modules ──────────────────────────────────────────
+        if _selected_addon_keys:
+            project_path = Path.cwd() / project_name
+            env_config = {
+                "project_name": project_name,
+                "db_type": db_type,
+                "db_config": db_config,
+                "preset_key": _preset_key,
+            }
+            with Progress(
+                SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+                transient=False,
+            ) as _addon_progress:
+                _addon_task = _addon_progress.add_task(
+                    "Applying add-on modules...", total=None
+                )
+                for _addon in _addon_instances:
+                    try:
+                        await _addon.apply(project_path, project_name, env_config)
+                    except PresetError as e:
+                        show_error("Add-on Error", str(e))
+                        return 1
+                    except Exception as e:
+                        show_error(
+                            f"Add-on '{_addon.name}' Error",
+                            str(e),
+                        )
+                        return 1
+                _addon_progress.update(
+                    _addon_task,
+                    description="Add-on modules applied",
+                    completed=100,
+                )
 
         # Create apps
         apps = create_apps_loop(scaffolder)
@@ -1457,6 +1849,12 @@ async def _async_main() -> int:
 
         # Completion
         show_completion(project_name, db_type, github_created, apps)
+        if _selected_addon_keys:
+            console.print(
+                f"  [dim {Theme.MUTED}]{icon('bullet')}[/] [{Theme.ACCENT}]Add-ons:[/]   "
+                f"{', '.join(a.name for a in _addon_instances)}"
+            )
+            console.print()
 
         return 0
 
@@ -1468,6 +1866,9 @@ async def _async_main() -> int:
         show_error("AJO Error", str(e))
         return 1
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         show_error("Unexpected Error", str(e))
         console.print(center(f"[italic {Theme.MUTED}]Please report this on GitHub[/]"))
         return 1
