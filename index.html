@@ -258,14 +258,14 @@
 
         <!-- GitHub Repo Button -->
         <a href="https://github.com/zaidejjo/ajo-cli" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1.5 bg-panel border border-panel hover:border-primary/50 text-xs text-muted hover:text-primary rounded transition-all duration-200" title="GitHub Repository">
-          <i data-lucide="github" class="w-4 h-4"></i>
+          <i data-lucide="folder-git-2" class="w-4 h-4"></i>
           <span class="hidden sm:inline uppercase font-bold tracking-wider text-[10px]">GITHUB</span>
         </a>
 
         <!-- Developer Portfolio Button -->
-        <a href="https://zaidejjo.github.io/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1.5 bg-primary text-bg font-bold hover:bg-transparent hover:text-primary border border-primary text-xs rounded transition-all duration-200" title="Developer Portfolio">
-          <i data-lucide="external-link" class="w-4 h-4"></i>
-          <span class="hidden sm:inline uppercase font-bold tracking-wider text-[10px]">PORTFOLIO</span>
+        <a href="https://github.com/zaidejjo/ajo-cli" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1.5 bg-primary text-bg font-bold hover:bg-transparent hover:text-primary border border-primary text-xs rounded transition-all duration-200" title="Developer Portfolio">
+          <i data-lucide="book-text" class="w-4 h-4"></i>
+          <span class="hidden sm:inline uppercase font-bold tracking-wider text-[10px]">DOCS</span>
         </a>
 
       </div>
@@ -303,9 +303,9 @@
           <div class="flex items-center justify-between bg-panel border border-panel hover:border-primary/30 rounded p-3 transition-all duration-300">
             <div class="flex items-center gap-3 overflow-hidden">
               <span class="text-primary font-bold select-none">$</span>
-              <code class="text-xs text-bright font-mono truncate" id="quick-install-cmd">pipx install ajo-cli</code>
+              <code class="text-xs text-bright font-mono truncate" id="quick-install-cmd">uv tool install ajo-cli</code>
             </div>
-            <button onclick="copyCommand('pipx install ajo-cli', 'copy-btn-hero')" id="copy-btn-hero" class="p-1.5 text-muted hover:text-primary hover:bg-bg rounded transition-all duration-200" title="Copy to Clipboard">
+            <button onclick="copyCommand('uv tool install ajo-cli', 'copy-btn-hero')" id="copy-btn-hero" class="p-1.5 text-muted hover:text-primary hover:bg-bg rounded transition-all duration-200" title="Copy to Clipboard">
               <i data-lucide="copy" class="w-4 h-4"></i>
             </button>
           </div>
@@ -604,7 +604,7 @@
           Installation <span class="text-primary text-glow-primary">Guide</span>
         </h2>
         <p class="text-muted text-sm max-w-2xl mx-auto">
-          Install AJO using your preferred package manager. We recommend using isolated environments like pipx or uv.
+          Install AJO using your preferred package manager. We recommend using isolated environments like uv or pipx.
         </p>
       </div>
 
@@ -616,11 +616,11 @@
           
           <!-- Tabs -->
           <div class="flex flex-wrap border-b sm:border-b-0 border-panel">
-            <button onclick="switchTab('pipx')" id="tab-pipx" class="px-5 py-3 text-xs font-bold tracking-wider border-r border-panel transition-all duration-200 text-primary border-b-2 border-b-primary bg-panel/30">
-              pipx / pip
-            </button>
-            <button onclick="switchTab('uv')" id="tab-uv" class="px-5 py-3 text-xs font-bold tracking-wider border-r border-panel transition-all duration-200 text-muted hover:text-bright border-b-2 border-b-transparent">
+            <button onclick="switchTab('uv')" id="tab-uv" class="px-5 py-3 text-xs font-bold tracking-wider border-r border-panel transition-all duration-200 text-primary border-b-2 border-b-primary bg-panel/30">
               uv tool
+            </button>
+            <button onclick="switchTab('pipx')" id="tab-pipx" class="px-5 py-3 text-xs font-bold tracking-wider border-r border-panel transition-all duration-200 text-muted hover:text-bright border-b-2 border-b-transparent">
+              pipx / pip
             </button>
             <button onclick="switchTab('aur')" id="tab-aur" class="px-5 py-3 text-xs font-bold tracking-wider border-r border-panel transition-all duration-200 text-muted hover:text-bright border-b-2 border-b-transparent">
               AUR (Arch)
@@ -886,17 +886,17 @@ pip install ajo-cli</code></pre>
 
     // Installation Section Tab Switcher
     const codeSnippets = {
-      pipx: `# Recommended — isolated environment\npipx install ajo-cli\n\n# With pip (global)\npip install ajo-cli`,
-      uv: `# Install as a tool with uv\nuv tool install ajo-cli`,
+      uv: `# Recommended Install as a tool with uv\nuv tool install ajo-cli\n\n# Run ajo\najo`,
+      pipx: `# Recommended — isolated environment\npipx install ajo-cli\n\n# With pip (global)\npip install ajo-cli\n\n# Run ajo\najo`,
       aur: `# Install using yay\nyay -S ajo-cli\n\n# Or using paru\nparu -S ajo-cli`,
-      source: `# Clone the repository\ngit clone https://github.com/zaidejjo/ajo-cli.git\ncd ajo-cli\n\n# Sync dependencies with uv\nuv sync\n\n# Run ajo\najo --version`
+      source: `# Clone the repository\ngit clone https://github.com/zaidejjo/ajo-cli.git\ncd ajo-cli\n\n# Sync dependencies and install with uv\nuv sync && uv tool install . --force\n\n# Run ajo\najo`
     };
 
-    let activeTab = 'pipx';
+    let activeTab = 'uv';
 
     function switchTab(tabName) {
       // Update active tab state
-      const tabs = ['pipx', 'uv', 'aur', 'source'];
+      const tabs = ['uv', 'pipx', 'aur', 'source'];
       tabs.forEach(t => {
         const tabBtn = document.getElementById(`tab-${t}`);
         if (t === tabName) {
