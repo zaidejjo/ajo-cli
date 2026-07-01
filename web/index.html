@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth" data-theme="mac-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ajo cli — Django Scaffolder</title>
+
+  <link rel="icon" href="images/logo-removebg-preview.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:           'var(--bg)',
+            'bg-elevated':'var(--bg-elevated)',
+            'bg-panel':   'var(--bg-panel)',
+            'bg-card':    'var(--bg-card)',
+            ink:          'var(--ink)',
+            muted:        'var(--muted)',
+            faint:        'var(--faint)',
+            line:         'var(--line)',
+            line2:        'var(--line2)',
+            accent:       'var(--accent)',
+            'accent-2':   'var(--accent-2)',
+            'accent-3':   'var(--accent-3)',
+            success:      'var(--success)',
+            warning:      'var(--warning)',
+            danger:       'var(--danger)',
+          },
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          boxShadow: {
+            'soft':     '0 2px 8px rgba(0,0,0,0.20), 0 1px 2px rgba(0,0,0,0.10)',
+            'soft-lg':  '0 12px 36px -8px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.15)',
+            'inner-hi': 'inset 0 1px 0 rgba(255,255,255,0.06)',
+            'premium':  '0 24px 70px -12px rgba(0, 0, 0, 0.45)',
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      /* Mac Dark (Apple-inspired) */
+      --bg:           #050506;
+      --bg-elevated:  #0d0d11;
+      --bg-panel:     #121217;
+      --bg-card:      rgba(255,255,255,0.04);
+      --ink:          #f5f5f7;
+      --muted:        #86868b;
+      --faint:        #6e6e73;
+      --line:         rgba(255,255,255,0.06);
+      --line2:        rgba(255,255,255,0.12);
+      --accent:       #0a84ff;
+      --accent-2:     #64d2ff;
+      --accent-3:     #ff9f0a;
+      --success:      #30d158;
+      --warning:      #ffd60a;
+      --danger:       #ff453a;
+    }
+
+    [data-theme="mac-light"] {
+      --bg:           #fafafa;
+      --bg-elevated:  #ffffff;
+      --bg-panel:     #f5f5f7;
+      --bg-card:      rgba(0, 0, 0, 0.03);
+      --ink:          #1d1d1f;
+      --muted:        #6e6e73;
+      --faint:        #86868b;
+      --line:         rgba(0, 0, 0, 0.06);
+      --line2:        rgba(0, 0, 0, 0.12);
+      --accent:       #0070f3;
+      --accent-2:     #00b4d8;
+      --accent-3:     #f59e0b;
+      --success:      #10b981;
+      --warning:      #f59e0b;
+      --danger:       #ef4444;
+    }
+
+    [data-theme="catppuccin"] {
+      --bg:           #1e1e2e;
+      --bg-elevated:  #181825;
+      --bg-panel:     #313244;
+      --bg-card:      rgba(255,255,255,0.025);
+      --ink:          #cdd6f4;
+      --muted:        #a6adc8;
+      --faint:        #6c7086;
+      --line:         rgba(255,255,255,0.05);
+      --line2:        rgba(255,255,255,0.09);
+      --accent:       #89b4fa;
+      --accent-2:     #cba6f7;
+      --accent-3:     #f5c2e7;
+      --success:      #a6e3a1;
+      --warning:      #f9e2af;
+      --danger:       #f38ba8;
+    }
+
+    html { background: var(--bg); }
+    body {
+      background:
+        radial-gradient(1200px 600px at 75% -10%, color-mix(in srgb, var(--accent) 7%, transparent) 0%, transparent 60%),
+        radial-gradient(900px 500px at 0% 30%, color-mix(in srgb, var(--accent-2) 5%, transparent) 0%, transparent 55%),
+        var(--bg);
+      color: var(--ink);
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color 0.4s ease, color 0.4s ease;
+    }
+
+    /* Light mode gradient adjustment */
+    [data-theme="mac-light"] body {
+      background:
+        radial-gradient(1200px 600px at 75% -10%, color-mix(in srgb, var(--accent) 3%, transparent) 0%, transparent 60%),
+        radial-gradient(900px 500px at 0% 30%, color-mix(in srgb, var(--accent-2) 3%, transparent) 0%, transparent 55%),
+        var(--bg);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: var(--line2);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: padding-box; }
+
+    /* Selection */
+    ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); color: var(--ink); }
+
+    /* Frosted glass */
+    .glass {
+      background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      transition: transform .25s ease, border-color .25s ease, background .25s ease, box-shadow .25s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--line2);
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
+    }
+
+    /* mac-style segmented tab pills */
+    .tab-pill {
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all .15s ease;
+      letter-spacing: 0.005em;
+    }
+    .tab-pill:hover { color: var(--ink); }
+    .tab-pill.active {
+      background: var(--bg-panel);
+      color: var(--ink);
+      box-shadow: var(--inner-hi), 0 1px 2px rgba(0,0,0,0.20);
+    }
+
+    /* Primary button */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.005em;
+      transition: transform .15s ease, opacity .15s ease;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 1px 2px rgba(0,0,0,0.25);
+    }
+    .btn-primary:hover { transform: translateY(-1px); opacity: 0.9; }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 500;
+      transition: all .15s ease;
+    }
+    .btn-ghost:hover { border-color: var(--line2); background: color-mix(in srgb, var(--accent) 6%, var(--bg-card)); }
+
+    /* Pill / tag */
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    /* Status dot */
+    @keyframes pulse-soft {
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 50%, transparent); }
+      50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--success) 0%, transparent); }
+    }
+    .pulse-dot {
+      animation: pulse-soft 2.2s ease-in-out infinite;
+    }
+
+    /* Cursor blink */
+    .cursor-blink::after {
+      content: '▍';
+      display: inline-block;
+      margin-left: 2px;
+      animation: blink 1s steps(1) infinite;
+      color: var(--accent);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* Traffic lights */
+    .tl { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+    /* Section eyebrow */
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px 4px 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* Heading */
+    h1, h2, h3 { letter-spacing: -0.02em; }
+
+    /* Terminal */
+    .terminal {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--soft-lg);
+      overflow: hidden;
+    }
+    .terminal-titlebar {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg-panel);
+    }
+    .terminal-titlebar .traffic { display: inline-flex; gap: 8px; }
+    .terminal-titlebar .title { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
+
+    .ascii-logo {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      line-height: 1.05;
+      color: var(--accent);
+      letter-spacing: 0;
+      white-space: pre;
+    }
+
+    /* Subtle ring */
+    .ring-soft {
+      box-shadow: 0 0 0 1px var(--line), 0 1px 0 rgba(255,255,255,0.04) inset;
+    }
+
+    /* Make inline code look nice */
+    code:not(pre code) {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.86em;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      color: var(--accent);
+    }
+
+    /* Progress bar */
+    .progress-track {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--line);
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width .3s ease;
+    }
+    /* Shimmer effect */
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, white 20%, transparent),
+        transparent
+      );
+      animation: shimmer 2s infinite;
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* Card icon container */
+    .icon-box {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+
+    /* Theme accent for cards (rotating) */
+    .accent-blue   { --card-accent: var(--accent); }
+    .accent-purple { --card-accent: var(--accent-2); }
+    .accent-pink   { --card-accent: var(--accent-3); }
+    .accent-green  { --card-accent: var(--success); }
+
+    .card-accent-tinted:hover {
+      background: color-mix(in srgb, var(--card-accent) 6%, var(--bg-card));
+      border-color: color-mix(in srgb, var(--card-accent) 30%, var(--line));
+    }
+    .card-accent-tinted:hover .icon-box {
+      background: color-mix(in srgb, var(--card-accent) 18%, transparent);
+      border-color: color-mix(in srgb, var(--card-accent) 35%, transparent);
+    }
+  </style>
+</head>
+
+<body class="relative min-h-screen overflow-x-hidden">
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="sticky top-0 z-50 glass border-b border-[color:var(--line)]">
+    <div class="max-w-7xl mx-auto px-5 lg:px-8 py-3 flex items-center justify-between gap-6">
+
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-2.5 group">
+          <img src="images/logo_images.svg" alt=""
+               class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[color:var(--accent)] text-white font-bold text-[13px] tracking-tight shadow-soft">
+        <!--<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[color:var(--accent)] text-white font-bold text-[13px] tracking-tight shadow-soft">
+          aj
+        </span>-->
+        <span class="font-bold text-[15px] tracking-tight">ajo</span>
+        <span class="pill !text-[10px] !py-0.5 !px-2 text-[color:var(--muted)]">
+          v3.4.0
+        </span>
+      </a>
+
+      <!-- Nav -->
+      <nav class="hidden md:flex items-center gap-1 text-[13px]">
+        <a href="#presets" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Presets</a>
+        <a href="#installation" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Installation</a>
+        <a href="#diagnostics" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Diagnostics</a>
+      </nav>
+
+      <!-- Right -->
+      <div class="flex items-center gap-2">
+        <button id="theme-toggle" class="btn-ghost !py-1.5 !px-2.5" title="Switch theme">
+          <i data-lucide="moon-star" class="w-4 h-4"></i>
+          <span id="theme-label" class="hidden sm:inline text-[12px] font-medium">Light Dark</span>
+        </button>
+        <a href="https://github.com/zaidejjo/ajo-cli" target="_blank" rel="noopener noreferrer" class="btn-ghost !py-1.5 !px-2.5" title="GitHub">
+            <svg class="w-4 h-4 fill-white" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+            </svg>
+          <span class="hidden sm:inline text-[12px] font-medium">GitHub</span>
+        </a>
+        <a href="https://github.com/zaidejjo/ajo-cli/blob/main/README.md" target="_blank" rel="noopener noreferrer" class="btn-primary !py-1.5 !px-3 text-[12px]">
+          <i data-lucide="book-open-text" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Docs</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="max-w-7xl mx-auto px-5 lg:px-8 py-14 space-y-24">
+
+    <!-- ===================== HERO ===================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center pt-6">
+      <!-- Left -->
+      <div class="lg:col-span-5 space-y-7">
+        <div class="space-y-4">
+          <span class="eyebrow">
+            <i data-lucide="sparkles" class="w-3 h-3"></i>
+            Django scaffolder · v3.4.0
+          </span>
+          <h1 class="text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight">
+            Stop configuring Django.<br>
+            <span class="text-[color:var(--accent)]">Start shipping it.</span>
+          </h1>
+          <p class="text-[15px] text-[color:var(--muted)] leading-relaxed max-w-md">
+            AJO scaffolds production-ready Django projects in seconds — pick a preset, layer add-ons, and walk away with a repo you can deploy today.
+          </p>
+        </div>
+
+        <!-- Quick install -->
+        <div class="space-y-2">
+          <span class="text-[10px] uppercase tracking-[0.14em] text-[color:var(--faint)] font-semibold">Quick install</span>
+          <div class="flex items-center justify-between gap-3 rounded-xl bg-[color:var(--bg-elevated)] border border-[color:var(--line)] px-4 py-3 hover:border-[color:var(--line2)] transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-[color:var(--accent)] font-mono font-semibold select-none">$</span>
+              <code id="quick-install-cmd" class="font-mono text-[13px] truncate text-[color:var(--ink)]">uv tool install ajo-cli</code>
+            </div>
+            <button id="copy-btn-hero" class="shrink-0 p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors" title="Copy">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- GitHub Social Proof Strip -->
+        <div class="flex items-center gap-4 text-[11px] font-medium text-[color:var(--muted)]">
+          <!-- Stars -->
+          <div class="flex items-center gap-1.5">
+            <i data-lucide="star" class="w-3.5 h-3.5 text-yellow-500"></i>
+            <span>
+              <img src="https://img.shields.io/github/stars/zaidejjo/ajo-cli?style=flat&label=stars&color=gray"
+                   alt="GitHub stars"
+                   class="h-4 align-middle">
+            </span>
+          </div>
+
+          <!-- Forks -->
+          <div class="flex items-center gap-1.5">
+            <i data-lucide="git-fork" class="w-3.5 h-3.5 text-accent"></i>
+            <span>
+              <img src="https://img.shields.io/github/forks/zaidejjo/ajo-cli?style=flat&label=forks&color=gray"
+                   alt="GitHub forks"
+                   class="h-4 align-middle">
+            </span>
+          </div>
+
+          <!-- Downloads (npm) - بما أن المشروع على PyPI، استخدم شارة التحميلات -->
+          <div class="flex items-center gap-1.5">
+            <i data-lucide="package" class="w-3.5 h-3.5 text-success"></i>
+            <span>
+              <img src="https://img.shields.io/pypi/dm/ajo-cli?style=flat&label=downloads/mo&color=gray"
+                   alt="PyPI downloads per month"
+                   class="h-4 align-middle">
+            </span>
+          </div>
+
+          <!-- Built daily - ثابت لأنها حالة المشروع -->
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-success pulse-dot"></span>
+            <span>Built daily</span>
+          </div>
+        </div>
+
+        <!-- Tech badges -->
+        <div class="flex flex-wrap gap-2">
+          <span class="pill"><span class="w-1.5 h-1.5 rounded-full bg-[color:var(--accent)]"></span>Python 3.10+</span>
+          <span class="pill"><span class="w-1.5 h-1.5 rounded-full bg-[color:var(--accent-2)]"></span>Django 5.0+</span>
+          <span class="pill"><span class="w-1.5 h-1.5 rounded-full bg-[color:var(--accent-3)]"></span>uv powered</span>
+        </div>
+      </div>
+
+      <!-- Right: Terminal -->
+      <div class="lg:col-span-7">
+        <div class="terminal">
+          <div class="terminal-titlebar">
+            <div class="traffic">
+              <span class="tl" style="background:#ff5f57"></span>
+              <span class="tl" style="background:#febc2e"></span>
+              <span class="tl" style="background:#28c840"></span>
+            </div>
+            <span class="title">ajo@cli — scaffold</span>
+            <button id="restart-terminal" class="ml-auto p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors" title="Replay">
+              <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          <div id="terminal-screen" class="p-6 h-[460px] overflow-y-auto font-mono text-[12.5px] leading-relaxed text-[color:var(--ink)]/90 space-y-2 selection:bg-transparent"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PRESETS ===================== -->
+    <section id="presets" class="space-y-10">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <span class="eyebrow"><i data-lucide="layers-3" class="w-3 h-3"></i>Architecture presets</span>
+        <h2 class="text-4xl font-bold tracking-tight">Pick a foundation. <span class="text-[color:var(--accent-2)]">Layer the rest.</span></h2>
+        <p class="text-[15px] text-[color:var(--muted)]">
+          Six preset architectures, each production-ready and zero-config. Mix and match with add-on modules — AJO handles the wiring.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+        <!-- Preset 1: Monolith -->
+        <article class="card card-accent-tinted accent-blue p-6 flex flex-col gap-5">
+          <div class="flex items-center justify-between">
+            <div class="icon-box"><i data-lucide="layout-template" class="w-5 h-5"></i></div>
+            <span class="text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">monolith</span>
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-[17px] font-semibold">Standard Monolith</h3>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              Classic full-stack Django with Bootstrap 5 and HTMX — modern interactivity without SPA complexity.
+            </p>
+          </div>
+          <div class="mt-auto pt-4 border-t border-[color:var(--line)] flex items-center justify-between text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">
+            <span>Django + HTMX</span>
+            <span class="text-[color:var(--card-accent)]">Ready</span>
+          </div>
+        </article>
+
+        <!-- Preset 2: REST API -->
+        <article class="card card-accent-tinted accent-purple p-6 flex flex-col gap-5">
+          <div class="flex items-center justify-between">
+            <div class="icon-box" style="--card-accent: var(--accent-2)"><i data-lucide="server" class="w-5 h-5"></i></div>
+            <span class="text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">rest-api</span>
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-[17px] font-semibold">REST API Ready</h3>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              Django REST Framework foundation with JWT auth, CORS, and auto-generated Swagger/OpenAPI docs.
+            </p>
+          </div>
+          <div class="mt-auto pt-4 border-t border-[color:var(--line)] flex items-center justify-between text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">
+            <span>DRF + JWT + Swagger</span>
+            <span class="text-[color:var(--card-accent)]">Model-aware</span>
+          </div>
+        </article>
+
+        <!-- Preset 3: Ninja -->
+        <article class="card card-accent-tinted accent-pink p-6 flex flex-col gap-5">
+          <div class="flex items-center justify-between">
+            <div class="icon-box" style="--card-accent: var(--accent-3)"><i data-lucide="zap" class="w-5 h-5"></i></div>
+            <span class="text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">ninja-api</span>
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-[17px] font-semibold">Ninja API</h3>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              Type-safe, high-throughput API with django-ninja + Pydantic and interactive Swagger UI.
+            </p>
+          </div>
+          <div class="mt-auto pt-4 border-t border-[color:var(--line)] flex items-center justify-between text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">
+            <span>Ninja + Pydantic</span>
+            <span class="text-[color:var(--card-accent)]">Model-aware</span>
+          </div>
+        </article>
+
+        <!-- Preset 4: GraphQL -->
+        <article class="card card-accent-tinted accent-blue p-6 flex flex-col gap-5">
+          <div class="flex items-center justify-between">
+            <div class="icon-box"><i data-lucide="network" class="w-5 h-5"></i></div>
+            <span class="text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">graphql-api</span>
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-[17px] font-semibold">GraphQL API</h3>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              Modern GraphQL endpoint using Graphene + Relay, with GraphiQL IDE pre-wired for query testing.
+            </p>
+          </div>
+          <div class="mt-auto pt-4 border-t border-[color:var(--line)] flex items-center justify-between text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">
+            <span>Graphene + Relay</span>
+            <span class="text-[color:var(--card-accent)]">Model-aware</span>
+          </div>
+        </article>
+
+        <!-- Preset 5: Docker -->
+        <article class="card card-accent-tinted accent-green p-6 flex flex-col gap-5">
+          <div class="flex items-center justify-between">
+            <div class="icon-box" style="--card-accent: var(--success)"><i data-lucide="container" class="w-5 h-5"></i></div>
+            <span class="text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">docker</span>
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-[17px] font-semibold">Docker Stack</h3>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              Multi-stage Dockerfile with uv caching and a compose file that ships Postgres, Redis, and Mailhog.
+            </p>
+          </div>
+          <div class="mt-auto pt-4 border-t border-[color:var(--line)] flex items-center justify-between text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">
+            <span>Compose + Redis + Mailhog</span>
+            <span class="text-[color:var(--card-accent)]">Production</span>
+          </div>
+        </article>
+
+        <!-- Preset 6: Model-Aware Engine -->
+        <article class="card p-6 flex flex-col gap-5" style="--card-accent: var(--accent-3); background: linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 4%, transparent), transparent);">
+          <div class="flex items-center justify-between">
+            <div class="icon-box" style="--card-accent: var(--accent-3); background: color-mix(in srgb, var(--accent-3) 12%, transparent); border-color: color-mix(in srgb, var(--accent-3) 30%, transparent); color: var(--accent-3);">
+              <i data-lucide="binary" class="w-5 h-5"></i>
+            </div>
+            <span class="text-[10px] font-semibold tracking-widest text-[color:var(--accent-3)] uppercase">AST engine</span>
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-[17px] font-semibold">Model-Aware Scaffolding</h3>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              AJO inspects your Django models via AST and auto-generates serializers, viewsets, routers, and endpoints. Zero boilerplate.
+            </p>
+          </div>
+          <div class="mt-auto pt-4 border-t border-[color:var(--line)] flex items-center justify-between text-[10px] font-semibold tracking-widest text-[color:var(--faint)] uppercase">
+            <span>Zero boilerplate</span>
+            <span class="text-[color:var(--accent-3)]">Smart engine</span>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ===================== ADD-ONS ===================== -->
+    <section class="space-y-10">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <h2 class="text-3xl font-bold tracking-tight">Add-on <span class="text-[color:var(--accent-3)]">modules</span></h2>
+        <p class="text-[14px] text-[color:var(--muted)]">
+          Optional features that slot into any preset — pick them interactively or via CLI flags.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl mx-auto">
+
+        <article class="card card-accent-tinted accent-blue p-6 flex gap-4">
+          <div class="icon-box shrink-0"><i data-lucide="key-round" class="w-5 h-5"></i></div>
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between gap-3">
+              <h4 class="font-semibold text-[15px]">Auth & Users</h4>
+              <span class="text-[10px] font-mono text-[color:var(--muted)] px-2 py-0.5 rounded border border-[color:var(--line)] bg-[color:var(--bg-card)]">--auth</span>
+            </div>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              SimpleJWT auth, custom <code>User</code> model with avatar and bio fields, registration/login templates, and preset-aware endpoints.
+            </p>
+          </div>
+        </article>
+
+        <article class="card card-accent-tinted accent-purple p-6 flex gap-4">
+          <div class="icon-box shrink-0" style="--card-accent: var(--accent-2)"><i data-lucide="cpu" class="w-5 h-5"></i></div>
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between gap-3">
+              <h4 class="font-semibold text-[15px]">Caching & Performance</h4>
+              <span class="text-[10px] font-mono text-[color:var(--muted)] px-2 py-0.5 rounded border border-[color:var(--line)] bg-[color:var(--bg-card)]">--cache</span>
+            </div>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              Redis via <code>django-redis</code>, connection pooling, django-debug-toolbar, and demo cached views to compare.
+            </p>
+          </div>
+        </article>
+
+        <article class="card card-accent-tinted accent-pink p-6 flex gap-4">
+          <div class="icon-box shrink-0" style="--card-accent: var(--accent-3)"><i data-lucide="shield-alert" class="w-5 h-5"></i></div>
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between gap-3">
+              <h4 class="font-semibold text-[15px]">Security Hardening</h4>
+              <span class="text-[10px] font-mono text-[color:var(--muted)] px-2 py-0.5 rounded border border-[color:var(--line)] bg-[color:var(--bg-card)]">--security</span>
+            </div>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              Brute-force protection via <code>django-axes</code>, TOTP 2FA, CSP headers, and HSTS/XSS/CSRF hardening.
+            </p>
+          </div>
+        </article>
+
+        <article class="card card-accent-tinted accent-blue p-6 flex gap-4">
+          <div class="icon-box shrink-0"><i data-lucide="flask-conical" class="w-5 h-5"></i></div>
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between gap-3">
+              <h4 class="font-semibold text-[15px]">Testing Infrastructure</h4>
+              <span class="text-[10px] font-mono text-[color:var(--muted)] px-2 py-0.5 rounded border border-[color:var(--line)] bg-[color:var(--bg-card)]">--testing</span>
+            </div>
+            <p class="text-[13px] text-[color:var(--muted)] leading-relaxed">
+              pytest + pytest-django, coverage (fail-under 80%), factory-boy, and auto-generated model factories + API tests.
+            </p>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ===================== INSTALLATION ===================== -->
+    <section id="installation" class="space-y-10">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <span class="eyebrow"><i data-lucide="download" class="w-3 h-3"></i>Getting started</span>
+        <h2 class="text-4xl font-bold tracking-tight">Install once. <span class="text-[color:var(--accent)]">Scaffold forever.</span></h2>
+        <p class="text-[15px] text-[color:var(--muted)]">
+          Pick your favorite package manager. We recommend isolated environments — uv or pipx.
+        </p>
+      </div>
+
+      <div class="max-w-3xl mx-auto">
+        <!-- Tabs -->
+        <div class="flex flex-wrap items-center gap-1 p-1 rounded-2xl bg-[color:var(--bg-card)] border border-[color:var(--line)] w-fit mx-auto mb-4">
+          <button class="tab-pill active" data-tab="uv">uv tool</button>
+          <button class="tab-pill" data-tab="pipx">pipx / pip</button>
+          <button class="tab-pill" data-tab="aur">AUR</button>
+          <button class="tab-pill" data-tab="source">From source</button>
+        </div>
+
+        <!-- Terminal block -->
+        <div class="terminal">
+          <div class="terminal-titlebar">
+            <div class="traffic">
+              <span class="tl" style="background:#ff5f57"></span>
+              <span class="tl" style="background:#febc2e"></span>
+              <span class="tl" style="background:#28c840"></span>
+            </div>
+            <span class="title" id="install-title">uv — install ajo-cli</span>
+            <button id="copy-install" class="ml-auto p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors" title="Copy">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <pre id="code-block" class="m-0 p-6 font-mono text-[13px] leading-relaxed overflow-x-auto text-[color:var(--ink)]/90 whitespace-pre"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== DIAGNOSTICS ===================== -->
+    <section id="diagnostics" class="space-y-10">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <span class="eyebrow" style="--accent: var(--accent-3); background: color-mix(in srgb, var(--accent-3) 10%, transparent); border-color: color-mix(in srgb, var(--accent-3) 25%, transparent); color: var(--accent-3);">
+          <i data-lucide="shield-check" class="w-3 h-3"></i>Self-healing
+        </span>
+        <h2 class="text-4xl font-bold tracking-tight">Smart CLI & <span class="text-[color:var(--accent-3)]">diagnostics</span></h2>
+        <p class="text-[15px] text-[color:var(--muted)]">
+          AJO isn’t just for scaffolding. Run <code>ajo</code> inside any existing Django project to unlock a context-aware dashboard and one-click fixes.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+
+        <!-- Diagnostics panel -->
+        <div class="lg:col-span-7">
+          <div class="terminal h-full">
+            <div class="terminal-titlebar">
+              <div class="traffic">
+                <span class="tl" style="background:#ff5f57"></span>
+                <span class="tl" style="background:#febc2e"></span>
+                <span class="tl" style="background:#28c840"></span>
+              </div>
+              <div class="flex items-center gap-2 title">
+                <i data-lucide="activity" class="w-3.5 h-3.5 text-[color:var(--accent-3)]"></i>
+                AJO diagnostic engine
+              </div>
+              <span class="ml-auto text-[10px] font-semibold tracking-widest text-[color:var(--accent-3)] px-2 py-0.5 rounded border border-[color:var(--accent-3)]/30 bg-[color:var(--accent-3)]/10">SCANNER</span>
+            </div>
+
+            <div class="p-6 space-y-5">
+              <div class="flex items-center justify-between border-b border-[color:var(--line)] pb-3">
+                <span class="font-mono text-[12px] text-[color:var(--muted)]">TARGET · ./my_django_project</span>
+                <span id="diag-status" class="font-mono text-[11px] font-semibold text-[color:var(--muted)]">READY TO SCAN</span>
+              </div>
+
+              <div id="diag-checks-list" class="space-y-3"></div>
+
+              <div class="pt-3 border-t border-[color:var(--line)] flex items-center justify-between">
+                <span class="text-[11px] text-[color:var(--faint)] font-mono">ajo doctor ./my_django_project</span>
+                <button id="run-diag-btn" class="btn-primary">
+                  <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                  <span id="run-diag-label">Run diagnostics</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features column -->
+        <div class="lg:col-span-5 space-y-5">
+          <article class="card card-accent-tinted accent-blue p-5 flex gap-3">
+            <div class="icon-box shrink-0 !w-9 !h-9"><i data-lucide="layout-dashboard" class="w-4 h-4"></i></div>
+            <div>
+              <h4 class="font-semibold text-[14px] mb-1">Live project dashboard</h4>
+              <p class="text-[12.5px] text-[color:var(--muted)] leading-relaxed">
+                Real-time project metadata — git branch, virtualenv, server state, pending migrations, Ruff lint status.
+              </p>
+            </div>
+          </article>
+
+          <article class="card card-accent-tinted accent-purple p-5 flex gap-3">
+            <div class="icon-box shrink-0 !w-9 !h-9" style="--card-accent: var(--accent-2)"><i data-lucide="wrench" class="w-4 h-4"></i></div>
+            <div>
+              <h4 class="font-semibold text-[14px] mb-1">One-click auto-fixes</h4>
+              <p class="text-[12.5px] text-[color:var(--muted)] leading-relaxed">
+                Detects misconfigurations and resolves them instantly — secure keys, admin URLs, duplicate migrations, more.
+              </p>
+            </div>
+          </article>
+
+          <article class="card card-accent-tinted accent-pink p-5 flex gap-3">
+            <div class="icon-box shrink-0 !w-9 !h-9" style="--card-accent: var(--accent-3)"><i data-lucide="alert-triangle" class="w-4 h-4"></i></div>
+            <div>
+              <h4 class="font-semibold text-[14px] mb-1">Context-aware commands</h4>
+              <p class="text-[12.5px] text-[color:var(--muted)] leading-relaxed">
+                Surfaces urgent actions — create a superuser, run migrations — based on the actual state of your local database.
+              </p>
+            </div>
+          </article>
+        </div
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="border-t border-[color:var(--line)] mt-8">
+    <div class="max-w-7xl mx-auto px-5 lg:px-8 py-10 flex flex-col md:flex-row items-center justify-between gap-5">
+      <div class="flex items-center gap-3 text-[13px] text-[color:var(--muted)]">
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-[color:var(--accent)] text-white font-bold text-[10px]">aj</span>
+        <span>Built with</span>
+        <i data-lucide="heart" class="w-3.5 h-3.5 text-[color:var(--accent-3)]"></i>
+        <span>Python 3.10+ · Django 5.0+ · uv · Ruff</span>
+      </div>
+
+      <div class="flex items-center gap-5 text-[12px] text-[color:var(--muted)] font-medium">
+        <a href="https://github.com/zaidejjo/ajo-cli" class="hover:text-[color:var(--ink)] transition-colors flex items-center gap-1.5">
+            <svg class="w-4 h-4 fill-white" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+            </svg> GitHub
+        </a>
+        <a href="https://zaidejjo.github.io/" class="hover:text-[color:var(--ink)] transition-colors flex items-center gap-1.5">
+          <i data-lucide="globe" class="w-4 h-4"></i> Portfolio
+        </a>
+      </div>
+    </div>
+    <div class="text-center pb-6 text-[10px] uppercase tracking-[0.2em] text-[color:var(--faint)]">
+      © 2026 AJO CLI · MIT License
+    </div>
+  </footer>
+
+  <!-- ===================== JS ===================== -->
+  <script>
+    // Init icons
+    lucide.createIcons();
+
+    // ===== Theme toggle =====
+    const themes = ['light-dark', 'catppuccin'];
+    const themeNames = { 'light-dark': 'Light Dark', 'catppuccin': 'Catppuccin' };
+    const themeIcons = { 'light-dark': 'moon-star', 'catppuccin': 'palette' };
+    let themeIndex = 0;
+
+    const saved = localStorage.getItem('ajo-theme');
+    if (saved && themes.includes(saved)) {
+      themeIndex = themes.indexOf(saved);
+      applyTheme(saved, false);
+    }
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      themeIndex = (themeIndex + 1) % themes.length;
+      applyTheme(themes[themeIndex]);
+    });
+
+    function applyTheme(name) {
+      if (name === 'light-dark') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', name);
+      }
+      localStorage.setItem('ajo-theme', name);
+      const lbl = document.getElementById('theme-label');
+      lbl.textContent = themeNames[name];
+      const btn = document.getElementById('theme-toggle');
+      const icon = btn.querySelector('[data-lucide]');
+      if (icon) icon.setAttribute('data-lucide', themeIcons[name]);
+      lucide.createIcons();
+    }
+
+    // ===== Copy utilities =====
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); return true; }
+      catch (e) { console.error(e); return false; }
+    }
+
+    document.getElementById('copy-btn-hero').addEventListener('click', async (e) => {
+      const ok = await copyText(document.getElementById('quick-install-cmd').textContent.trim());
+      const btn = e.currentTarget;
+      const icon = btn.querySelector('[data-lucide]');
+      if (ok) {
+        icon.setAttribute('data-lucide', 'check');
+        lucide.createIcons();
+        setTimeout(() => { icon.setAttribute('data-lucide', 'copy'); lucide.createIcons(); }, 1500);
+      }
+    });
+
+    // ===== Installation tabs =====
+    const codeSnippets = {
+      uv: `# Recommended as an isolated tool
+uv tool install ajo-cli
+
+# Run ajo
+ajo`,
+      pipx: `# Recommended — isolated environment
+pipx install ajo-cli
+
+# Or globally with pip
+pip install ajo-cli
+
+# Run ajo
+ajo`,
+      aur: `# Install using yay
+yay -S ajo-cli
+
+# Or using paru
+paru -S ajo-cli`,
+      source: `# Clone the repository
+git clone https://github.com/zaidejjo/ajo-cli.git
+cd ajo-cli
+
+# Sync deps & install with uv
+uv sync && uv tool install . --force
+
+# Run ajo
+ajo`
+    };
+    const tabTitles = {
+      uv: 'uv — install ajo-cli',
+      pipx: 'pipx — install ajo-cli',
+      aur: 'AUR — install ajo-cli',
+      source: 'git — install ajo-cli from source'
+    };
+
+    let activeTab = 'uv';
+    function setCode(tab) {
+      document.getElementById('code-block').textContent = codeSnippets[tab];
+      document.getElementById('install-title').textContent = tabTitles[tab];
+    }
+    setCode('uv');
+
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeTab = btn.dataset.tab;
+        setCode(activeTab);
+      });
+    });
+
+    document.getElementById('copy-install').addEventListener('click', async (e) => {
+      const ok = await copyText(codeSnippets[activeTab]);
+      const btn = e.currentTarget;
+      const icon = btn.querySelector('[data-lucide]');
+      if (ok) {
+        icon.setAttribute('data-lucide', 'check');
+        lucide.createIcons();
+        setTimeout(() => { icon.setAttribute('data-lucide', 'copy'); lucide.createIcons(); }, 1500);
+      }
+    });
+
+    // ===== Terminal simulator =====
+    const terminal = document.getElementById('terminal-screen');
+    let termTimers = [];
+
+    const asciiLogo =
+` █████╗      ██╗ ██████╗
+██╔══██╗     ██║██╔═══██╗
+███████║     ██║██║   ██║
+██╔══██╗██   ██║██║   ██║
+██║  ██║╚█████╔╝╚██████╔╝
+╚═╝  ╚═╝ ╚════╝  ╚═════╝ `;
+
+    function sleep(ms) {
+      return new Promise(r => {
+        const id = setTimeout(r, ms);
+        termTimers.push(id);
+      });
+    }
+
+    function clearTerm() { terminal.innerHTML = ''; }
+
+    function addLine(html) {
+      const el = document.createElement('div');
+      el.innerHTML = html;
+      terminal.appendChild(el);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    async function type(el, text, delay = 32) {
+      el.classList.add('cursor-blink');
+      for (let i = 0; i < text.length; i++) {
+        el.textContent += text[i];
+        terminal.scrollTop = terminal.scrollHeight;
+        await sleep(delay + Math.random() * 18);
+      }
+      el.classList.remove('cursor-blink');
+    }
+
+    async function runTerminal() {
+      clearTerm();
+
+      addLine(`<span class="text-[color:var(--faint)]">ajo@cli ~/projects</span> <span class="text-[color:var(--accent-2)]">▸</span>`);
+      await sleep(420);
+
+      const cmd = document.createElement('span');
+      cmd.className = 'text-[color:var(--ink)]';
+      terminal.appendChild(cmd);
+      await type(cmd, 'ajo new cyber_api', 55);
+      addLine('');
+
+      await sleep(220);
+      addLine(`<pre class="ascii-logo">${asciiLogo}</pre>`);
+      await sleep(200);
+      addLine(`<span class="text-[color:var(--ink)] font-semibold">AJO v3.4.0</span> <span class="text-[color:var(--muted)]">— Professional Django scaffolder</span>`);
+      addLine(`<span class="text-[color:var(--muted)]">Initializing scaffold session…</span>`);
+      await sleep(700);
+
+      // Preset
+      addLine(`<span class="text-[color:var(--accent-2)]">?</span> <span class="text-[color:var(--ink)] font-semibold">Choose architecture preset</span>`);
+      const preset = document.createElement('div');
+      preset.className = 'pl-4 space-y-1';
+      preset.innerHTML = `
+        <div id="p-monolith" class="text-[color:var(--accent)] font-semibold">▸ Standard Monolith <span class="text-[color:var(--faint)] font-normal">(Django + Bootstrap 5 + HTMX)</span></div>
+        <div id="p-rest" class="text-[color:var(--muted)]">  REST API Ready <span class="text-[color:var(--faint)] font-normal">(DRF + JWT + CORS + Swagger)</span></div>
+        <div id="p-ninja" class="text-[color:var(--muted)]">  Ninja API <span class="text-[color:var(--faint)] font-normal">(django-ninja + Pydantic)</span></div>
+        <div id="p-graphql" class="text-[color:var(--muted)]">  GraphQL API <span class="text-[color:var(--faint)] font-normal">(Graphene + Relay)</span></div>
+        <div id="p-docker" class="text-[color:var(--muted)]">  Docker Stack <span class="text-[color:var(--faint)] font-normal">(Compose + Redis + Mailhog)</span></div>`;
+      terminal.appendChild(preset);
+
+      await sleep(900);
+      document.getElementById('p-monolith').className = 'text-[color:var(--muted)]';
+      document.getElementById('p-monolith').innerHTML = '  Standard Monolith <span class="text-[color:var(--faint)] font-normal">(Django + Bootstrap 5 + HTMX)</span>';
+      document.getElementById('p-rest').className = 'text-[color:var(--accent)] font-semibold';
+      document.getElementById('p-rest').innerHTML = '▸ REST API Ready <span class="text-[color:var(--faint)] font-normal">(DRF + JWT + CORS + Swagger)</span>';
+      await sleep(450);
+
+      // Reset space
+      document.querySelectorAll('#p-monolith, #p-rest, #p-ninja, #p-graphql, #p-docker').forEach(d => { d.className = 'text-[color:var(--faint)]'; });
+      await sleep(150);
+      addLine(`<span class="text-[color:var(--success)]">✔</span> <span class="text-[color:var(--ink)] font-semibold">Preset:</span> <span class="text-[color:var(--accent)]">REST API Ready</span>`);
+      await sleep(450);
+
+      // Database
+      addLine(`<span class="text-[color:var(--accent-2)]">?</span> <span class="text-[color:var(--ink)] font-semibold">Select database</span>`);
+      const db = document.createElement('div');
+      db.className = 'pl-4 space-y-1';
+      db.innerHTML = `
+        <div id="db-pg" class="text-[color:var(--accent)] font-semibold">▸ PostgreSQL</div>
+        <div id="db-my" class="text-[color:var(--muted)]">  MySQL</div>
+        <div id="db-sq" class="text-[color:var(--muted)]">  SQLite</div>`;
+      terminal.appendChild(db);
+      await sleep(700);
+      db.remove();
+      addLine(`<span class="text-[color:var(--success)]">✔</span> <span class="text-[color:var(--ink)] font-semibold">Database:</span> <span class="text-[color:var(--accent)]">PostgreSQL</span>`);
+      await sleep(450);
+
+      // Add-ons
+      addLine(`<span class="text-[color:var(--accent-2)]">?</span> <span class="text-[color:var(--ink)] font-semibold">Select add-ons</span> <span class="text-[color:var(--faint)]">(space to toggle, enter to confirm)</span>`);
+      const add = document.createElement('div');
+      add.className = 'pl-4 space-y-1';
+      add.innerHTML = `
+        <div id="a-auth" class="text-[color:var(--accent)] font-semibold">▸ [ ] Auth & Users <span class="text-[color:var(--faint)] font-normal">(JWT, custom User)</span></div>
+        <div id="a-cache" class="text-[color:var(--muted)]">  [ ] Caching & Performance <span class="text-[color:var(--faint)] font-normal">(Redis, pooling)</span></div>
+        <div id="a-sec" class="text-[color:var(--muted)]">  [ ] Security Hardening <span class="text-[color:var(--faint)] font-normal">(Axes, 2FA, CSP)</span></div>
+        <div id="a-test" class="text-[color:var(--muted)]">  [ ] Testing Infrastructure <span class="text-[color:var(--faint)] font-normal">(pytest, coverage)</span></div>`;
+      terminal.appendChild(add);
+
+      // Toggle each
+      await sleep(600);
+      document.getElementById('a-auth').innerHTML = '<span class="text-[color:var(--success)]">▸</span> [✓] Auth & Users <span class="text-[color:var(--faint)] font-normal">(JWT, custom User)</span>';
+      await sleep(380);
+      document.getElementById('a-auth').className = 'text-[color:var(--faint)]';
+      document.getElementById('a-auth').innerHTML = '  [✓] Auth & Users <span class="text-[color:var(--faint)] font-normal">(JWT, custom User)</span>';
+      document.getElementById('a-cache').className = 'text-[color:var(--accent)] font-semibold';
+      document.getElementById('a-cache').innerHTML = '▸ [ ] Caching & Performance <span class="text-[color:var(--faint)] font-normal">(Redis, pooling)</span>';
+      await sleep(380);
+      document.getElementById('a-cache').innerHTML = '<span class="text-[color:var(--success)]">▸</span> [✓] Caching & Performance <span class="text-[color:var(--faint)] font-normal">(Redis, pooling)</span>';
+      await sleep(380);
+      document.getElementById('a-cache').className = 'text-[color:var(--faint)]';
+      document.getElementById('a-cache').innerHTML = '  [✓] Caching & Performance <span class="text-[color:var(--faint)] font-normal">(Redis, pooling)</span>';
+      document.getElementById('a-test').className = 'text-[color:var(--accent)] font-semibold';
+      document.getElementById('a-test').innerHTML = '▸ [ ] Testing Infrastructure <span class="text-[color:var(--faint)] font-normal">(pytest, coverage)</span>';
+      await sleep(380);
+      document.getElementById('a-test').innerHTML = '<span class="text-[color:var(--success)]">▸</span> [✓] Testing Infrastructure <span class="text-[color:var(--faint)] font-normal">(pytest, coverage)</span>';
+
+      await sleep(550);
+      add.remove();
+      addLine(`<span class="text-[color:var(--success)]">✔</span> <span class="text-[color:var(--ink)] font-semibold">Add-ons:</span> <span class="text-[color:var(--accent)]">auth, cache, testing</span>`);
+      await sleep(400);
+
+      // Project name
+      addLine(`<span class="text-[color:var(--accent-2)]">?</span> <span class="text-[color:var(--ink)] font-semibold">Project name</span> `);
+      const name = document.createElement('span');
+      name.className = 'text-[color:var(--ink)]';
+      terminal.appendChild(name);
+      await type(name, 'cyber_api', 60);
+      addLine('');
+      await sleep(400);
+
+      // Scaffold progress
+      addLine(`<span class="text-[color:var(--accent-3)] font-semibold">Scaffolding <span class="text-[color:var(--ink)]">cyber_api</span>…</span>`);
+      const steps = [
+        'Creating directory structure…',
+        'Injecting settings & URL config…',
+        'Wiring DRF, JWT, Swagger…',
+        'Generating User model & tests…',
+        'Installing dependencies via uv…',
+        'Initializing git repository…',
+      ];
+      for (const s of steps) {
+        const li = document.createElement('div');
+        li.className = 'flex items-center gap-2 text-[color:var(--muted)]';
+        li.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i><span>${s}</span>`;
+        terminal.appendChild(li);
+        lucide.createIcons();
+        terminal.scrollTop = terminal.scrollHeight;
+        await sleep(280);
+        li.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-[color:var(--success)]"></i><span class="text-[color:var(--muted)]">${s}</span>`;
+        lucide.createIcons();
+      }
+
+      await sleep(300);
+      // Progress bar
+      const wrap = document.createElement('div');
+      wrap.className = 'flex items-center gap-3 mt-1';
+      wrap.innerHTML = `
+        <div class="progress-track flex-1"><div class="progress-fill" id="ajo-prog"></div></div>
+        <span id="ajo-prog-label" class="text-[11px] font-mono text-[color:var(--muted)] w-10 text-right">0%</span>
+      `;
+      terminal.appendChild(wrap);
+      const fill = document.getElementById('ajo-prog');
+      const lbl = document.getElementById('ajo-prog-label');
+      for (let p = 0; p <= 100; p += 5) {
+        fill.style.width = p + '%';
+        lbl.textContent = p + '%';
+        await sleep(55);
+      }
+      await sleep(200);
+
+      addLine(`<span class="text-[color:var(--success)] font-semibold">✔ Project created</span>  <span class="text-[color:var(--faint)]">in ./cyber_api</span>`);
+      addLine(`<span class="text-[color:var(--success)] font-semibold">✔ Dependencies installed</span>  <span class="text-[color:var(--faint)]">via uv</span>`);
+      addLine(`<span class="text-[color:var(--success)] font-semibold">✔ Git initialized</span>  <span class="text-[color:var(--faint)]">main branch</span>`);
+      await sleep(500);
+
+      addLine('');
+      addLine(`<span class="text-[color:var(--accent)] font-semibold">Ready.</span> <span class="text-[color:var(--muted)]">Next: </span><span class="font-mono">cd cyber_api && ajo</span> <span class="text-[color:var(--accent-2)] cursor-blink"></span>`);
+    }
+
+    function restartTerminal() {
+      termTimers.forEach(id => clearTimeout(id));
+      termTimers = [];
+      runTerminal();
+    }
+
+    document.getElementById('restart-terminal').addEventListener('click', restartTerminal);
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      runTerminal();
+    });
+
+    // ===== Diagnostics engine =====
+    const diagChecks = [
+      { name: 'Missing contrib apps in INSTALLED_APPS', desc: 'Scans settings.py for standard Django apps.', fix: 'Added missing contrib apps to INSTALLED_APPS.' },
+      { name: 'Missing ALLOWED_HOSTS configuration',    desc: 'Verifies host validation settings.',       fix: 'Appended ["*"] to ALLOWED_HOSTS for dev.' },
+      { name: 'Hardcoded DEBUG=True in production',     desc: 'Checks environment variable fallback.',     fix: 'Wired DEBUG to env with False fallback.' },
+      { name: 'Missing or placeholder SECRET_KEY',      desc: 'Validates cryptographic key strength.',    fix: 'Generated a secure 50-character SECRET_KEY.' },
+    ];
+
+    const checksEl = document.getElementById('diag-checks-list');
+    const statusEl = document.getElementById('diag-status');
+    const runBtn   = document.getElementById('run-diag-btn');
+    const runLabel = document.getElementById('run-diag-label');
+    let diagMode = 'scan'; // scan | fix
+    let diagBusy = false;
+
+    function renderDiagnosticRows(state) {
+      checksEl.innerHTML = '';
+      diagChecks.forEach((c, i) => {
+        const row = document.createElement('div');
+        let icon, titleColor, titleText, descText, descColor;
+        if (state === 'pending') {
+          icon = 'circle'; titleColor = 'text-[color:var(--muted)]'; titleText = `Check: ${c.name}`; descText = c.desc; descColor = 'text-[color:var(--faint)]';
+        } else if (state === 'scanning') {
+          icon = 'loader-2'; titleColor = 'text-[color:var(--accent)]'; titleText = `Scanning: ${c.name}`; descText = c.desc; descColor = 'text-[color:var(--faint)]'; row.classList.add('animate-pulse');
+        } else if (state === 'warn') {
+          icon = 'alert-circle'; titleColor = 'text-[color:var(--warning)]'; titleText = `Issue: ${c.name}`; descText = c.desc; descColor = 'text-[color:var(--faint)]';
+        } else if (state === 'fixing') {
+          icon = 'loader-2'; titleColor = 'text-[color:var(--accent)]'; titleText = `Fixing: ${c.name}`; descText = c.fix; descColor = 'text-[color:var(--faint)]';
+        } else if (state === 'ok') {
+          icon = 'check-circle-2'; titleColor = 'text-[color:var(--success)]'; titleText = `Fixed: ${c.name}`; descText = c.fix; descColor = 'text-[color:var(--success)]/70';
+        }
+        row.className = `flex items-start gap-3 ${titleColor}`;
+        row.innerHTML = `
+          <i data-lucide="${icon}" class="w-4 h-4 mt-0.5 shrink-0 ${state === 'scanning' || state === 'fixing' ? 'animate-spin' : ''}"></i>
+          <div>
+            <p class="font-semibold text-[12.5px]">${titleText}</p>
+            <p class="text-[10.5px] ${descColor}">${descText}</p>
+          </div>`;
+        checksEl.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+    renderDiagnosticRows('pending');
+
+    async function runScan() {
+      if (diagBusy) return;
+      diagBusy = true;
+      runBtn.disabled = true;
+      runBtn.classList.add('opacity-60', 'cursor-not-allowed');
+      statusEl.textContent = 'SCANNING…';
+      statusEl.className = 'font-mono text-[11px] font-semibold text-[color:var(--accent)]';
+
+      renderDiagnosticRows('pending');
+      for (let i = 0; i < diagChecks.length; i++) {
+        const rows = checksEl.children;
+        const row = rows[i];
+        row.className = 'flex items-start gap-3 text-[color:var(--accent)]';
+        row.innerHTML = `
+          <i data-lucide="loader-2" class="w-4 h-4 mt-0.5 shrink-0 animate-spin"></i>
+          <div>
+            <p class="font-semibold text-[12.5px]">Scanning: ${diagChecks[i].name}</p>
+            <p class="text-[10.5px] text-[color:var(--faint)]">${diagChecks[i].desc}</p>
+          </div>`;
+        lucide.createIcons();
+        await sleep(720);
+        row.className = 'flex items-start gap-3 text-[color:var(--warning)]';
+        row.innerHTML = `
+          <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 shrink-0"></i>
+          <div>
+            <p class="font-semibold text-[12.5px]">Issue: ${diagChecks[i].name}</p>
+            <p class="text-[10.5px] text-[color:var(--faint)]">${diagChecks[i].desc}</p>
+          </div>`;
+        lucide.createIcons();
+      }
+      statusEl.textContent = `${diagChecks.length} ISSUES DETECTED`;
+      statusEl.className = 'font-mono text-[11px] font-semibold text-[color:var(--accent-3)]';
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+      runLabel.textContent = 'Run auto-fix';
+      runBtn.querySelector('[data-lucide]').setAttribute('data-lucide', 'wrench');
+      lucide.createIcons();
+      diagMode = 'fix';
+      diagBusy = false;
+    }
+
+    async function runFix() {
+      if (diagBusy) return;
+      diagBusy = true;
+      runBtn.disabled = true;
+      runBtn.classList.add('opacity-60', 'cursor-not-allowed');
+      statusEl.textContent = 'FIXING ISSUES…';
+      statusEl.className = 'font-mono text-[11px] font-semibold text-[color:var(--accent)]';
+      checksEl.innerHTML = '';
+      diagChecks.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'flex items-start gap-3 text-[color:var(--accent)]';
+        row.innerHTML = `
+          <i data-lucide="loader-2" class="w-4 h-4 mt-0.5 shrink-0 animate-spin"></i>
+          <div>
+            <p class="font-semibold text-[12.5px]">Fixing: ${c.name}</p>
+            <p class="text-[10.5px] text-[color:var(--faint)]">${c.fix}</p>
+          </div>`;
+        checksEl.appendChild(row);
+      });
+      lucide.createIcons();
+      for (let i = 0; i < diagChecks.length; i++) {
+        const row = checksEl.children[i];
+        await sleep(720);
+        row.className = 'flex items-start gap-3 text-[color:var(--success)]';
+        row.innerHTML = `
+          <i data-lucide="check-circle-2" class="w-4 h-4 mt-0.5 shrink-0"></i>
+          <div>
+            <p class="font-semibold text-[12.5px]">Fixed: ${diagChecks[i].name}</p>
+            <p class="text-[10.5px] text-[color:var(--success)]/70">${diagChecks[i].fix}</p>
+          </div>`;
+        lucide.createIcons();
+      }
+      statusEl.textContent = 'SYSTEM HEALTHY';
+      statusEl.className = 'font-mono text-[11px] font-semibold text-[color:var(--success)]';
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+      runLabel.textContent = 'Run diagnostics';
+      runBtn.querySelector('[data-lucide]').setAttribute('data-lucide', 'play');
+      lucide.createIcons();
+      diagMode = 'scan';
+      diagBusy = false;
+    }
+
+    runBtn.addEventListener('click', () => {
+      if (diagMode === 'scan') runScan();
+      else runFix();
+    });
+  </script>
+</body>
+</html>
