@@ -1673,7 +1673,17 @@ async def _headless_execute(args: argparse.Namespace) -> int:
             console.print(f"  Add-ons: {', '.join(a.name for a in addons)}")
         console.print()
 
-        success = await engine.execute(preset=preset_instance, addons=addons)
+        # Register the engine's rollback manager with the global SIGINT
+        # handler so that Ctrl+C before/after engine execution still
+        # triggers cleanup (the engine installs its own handler during
+        # execution).
+        from ajo.core.signals import register_rollback_handler
+
+        register_rollback_handler(lambda: engine._rollback.execute_all())
+        try:
+            success = await engine.execute(preset=preset_instance, addons=addons)
+        finally:
+            register_rollback_handler(None)
 
         if not success:
             show_error(
@@ -1795,6 +1805,14 @@ async def _async_main() -> int:
     if isinstance(result, int):
         return result  # Validation error
     args = result
+
+    # ── Install global SIGINT / SIGTERM handlers ─────────────────────────
+    # These provide a safety net for all code paths below (scaffold,
+    # interactive prompts, subprocess calls).  The scaffold engine also
+    # installs its own temporary handler during step execution.
+    from ajo.core.signals import install_signal_handlers
+
+    install_signal_handlers()
 
     # ── Subcommand dispatch (doctor, completion, …) ───────────────────────
     if args.command is not None:
