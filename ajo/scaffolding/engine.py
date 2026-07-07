@@ -24,6 +24,7 @@ from types import FrameType
 from typing import Any, Callable
 
 from ajo.core.exceptions import PresetError, RollbackError
+from ajo.plugins.hooks import PluginManager
 from ajo.presets.addons import AbstractAddon
 from ajo.ui.progress import AsyncProgressManager, run_command_streaming
 
@@ -117,6 +118,7 @@ class ScaffoldEngine:
         project_path: Path,
         *,
         env_config: dict[str, Any] | None = None,
+        plugin_manager: PluginManager | None = None,
     ) -> None:
         self.project_path = project_path.resolve()
         self.env_config = env_config or {}
@@ -124,6 +126,7 @@ class ScaffoldEngine:
         self._interrupted = False
         self._preset: Any | None = None
         self._addons: list[AbstractAddon] | None = None
+        self._plugin_manager: PluginManager | None = plugin_manager
 
         # Populate defaults if not provided
         self.env_config.setdefault("project_name", project_path.name)
@@ -215,6 +218,14 @@ class ScaffoldEngine:
                     )
                 )
 
+        if self._plugin_manager is not None:
+            steps.append(
+                (
+                    "Running pre-scaffold hooks",
+                    self._step_pre_hooks,
+                )
+            )
+
         if addons:
             self._addons = addons  # store for preview / rollback
             addon_deps: list[str] = []
@@ -242,6 +253,14 @@ class ScaffoldEngine:
                 (
                     "Applying add-on modules",
                     lambda: self._step_addon(addons),
+                )
+            )
+
+        if self._plugin_manager is not None:
+            steps.append(
+                (
+                    "Running post-scaffold hooks",
+                    self._step_post_hooks,
                 )
             )
 
@@ -528,6 +547,34 @@ class ScaffoldEngine:
                     self._safe_unlink(child)
 
         self._rollback.push("undo add-on modules", _undo_addon)
+
+    # ── Plugin hook steps ────────────────────────────────────────────────
+
+    async def _step_pre_hooks(self) -> None:
+        """Execute all loaded ``pre_scaffold`` plugin hooks."""
+        if self._plugin_manager is None:
+            return
+        errors = await self._plugin_manager.execute_pre_scaffold(
+            self.project_path,
+            self.env_config,
+        )
+        if errors:
+            raise PresetError(
+                f"Pre-scaffold hook(s) failed: {'; '.join(str(e) for e in errors)}"
+            )
+
+    async def _step_post_hooks(self) -> None:
+        """Execute all loaded ``post_scaffold`` plugin hooks."""
+        if self._plugin_manager is None:
+            return
+        errors = await self._plugin_manager.execute_post_scaffold(
+            self.project_path,
+            self.env_config,
+        )
+        if errors:
+            raise PresetError(
+                f"Post-scaffold hook(s) failed: {'; '.join(str(e) for e in errors)}"
+            )
 
     async def _step_uv_sync(self) -> None:
         """Run ``uv sync`` to lock the environment with live progress."""
