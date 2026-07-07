@@ -12,6 +12,7 @@ interface used by the :class:`~ajo.scaffolding.engine.ScaffoldEngine`.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import importlib.util
 import logging
@@ -337,21 +338,30 @@ class PluginManager:
     ) -> list[PluginHookError]:
         """Execute all hooks of a given type across all loaded plugins.
 
-        Plugins are executed in discovery order.  Each hook is called
-        independently so a failure in one does not prevent others from
-        running.
+        Independent plugins run **concurrently** via :class:`asyncio.TaskGroup`
+        (Python 3.11+).  Each hook runs as a separate task; a failure in one
+        does not prevent others from completing.  All errors are collected
+        and returned together.
         """
-        errors: list[PluginHookError] = []
-
+        # Build the list of (plugin_name, func) pairs to execute
+        tasks: list[tuple[str, HookFunc]] = []
         for manifest in self._manifests:
             registry = self._hook_registries.get(manifest.name)
             if registry is None:
                 continue
-
             func = registry.get(hook_type)
             if func is None:
                 continue
+            tasks.append((manifest.name, func))
 
+        if not tasks:
+            return []
+
+        errors: list[PluginHookError] = []
+        lock = asyncio.Lock()
+
+        async def _run_one(plugin_name: str, func: HookFunc) -> None:
+            """Invoke a single hook, recording any error."""
             try:
                 result = func(project_path, env_config)
                 if isinstance(result, Awaitable):
@@ -359,17 +369,22 @@ class PluginManager:
                 logger.debug(
                     "Hook %s for plugin %r completed",
                     hook_type.value,
-                    manifest.name,
+                    plugin_name,
                 )
             except Exception as exc:
                 err = PluginHookError(
-                    f"Plugin {manifest.name!r} {hook_type.value} hook failed: {exc}",
-                    plugin_name=manifest.name,
+                    f"Plugin {plugin_name!r} {hook_type.value} hook failed: {exc}",
+                    plugin_name=plugin_name,
                     hook_type=hook_type.value,
                     original=exc,
                 )
-                errors.append(err)
+                async with lock:
+                    errors.append(err)
                 logger.warning(str(err))
+
+        async with asyncio.TaskGroup() as tg:
+            for plugin_name, func in tasks:
+                tg.create_task(_run_one(plugin_name, func))
 
         return errors
 

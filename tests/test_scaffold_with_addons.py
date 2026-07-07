@@ -116,3 +116,90 @@ class TestScaffoldWithAllAddons:
         settings = (temp_project / "config" / "settings.py").read_text()
         assert "AUTH_USER_MODEL" in settings
         assert "CACHES" in settings
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Parallel add-on execution
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+class TestParallelAddonExecution:
+    """Verify that parallel add-on execution works correctly."""
+
+    async def test_parallel_addons_apply_without_error(
+        self, temp_project: Path, env_config: dict
+    ) -> None:
+        """Parallel apply of all 4 add-ons succeeds (they target diff files)."""
+        addons = resolve_addons(["auth", "cache", "security", "testing"])
+        from ajo.scaffolding.engine import ScaffoldEngine
+
+        engine = ScaffoldEngine(
+            temp_project,
+            env_config=env_config,
+        )
+        await engine._step_addon_parallel(addons)
+        # No exception means success
+
+    async def test_parallel_addons_create_same_files(
+        self, temp_project: Path, env_config: dict
+    ) -> None:
+        """Parallel add-ons still produce all expected files."""
+        addons = resolve_addons(["auth", "cache", "security", "testing"])
+        from ajo.scaffolding.engine import ScaffoldEngine
+
+        engine = ScaffoldEngine(
+            temp_project,
+            env_config=env_config,
+        )
+        await engine._step_addon_parallel(addons)
+
+        assert (temp_project / "accounts").is_dir()
+        assert (temp_project / "core").is_dir()
+        assert (temp_project / "pytest.ini").is_file()
+        settings = (temp_project / "config" / "settings.py").read_text()
+        assert "AUTH_USER_MODEL" in settings
+
+    async def test_parallel_addon_failure_collects_all_errors(
+        self, temp_project: Path
+    ) -> None:
+        """If one add-on fails, others still run and errors are collected."""
+        from unittest.mock import AsyncMock
+
+        from ajo.presets.addons import AbstractAddon
+
+        class FailingAddon(AbstractAddon):
+            name = "fail"
+            description = "Always fails"
+
+            async def apply(
+                self,
+                project_path: Path,
+                project_name: str,
+                env_config: dict,
+            ) -> None:
+                raise RuntimeError("intentional failure")
+
+        class GoodAddon(AbstractAddon):
+            name = "good"
+            description = "Always succeeds"
+
+            async def apply(
+                self,
+                project_path: Path,
+                project_name: str,
+                env_config: dict,
+            ) -> None:
+                (project_path / "good_addon_marker").write_text("ok")
+
+        from ajo.scaffolding.engine import ScaffoldEngine
+
+        engine = ScaffoldEngine(
+            temp_project,
+            env_config={"project_name": "test_project"},
+        )
+        with pytest.raises(Exception, match="Add-on.*failed"):
+            await engine._step_addon_parallel([FailingAddon(), GoodAddon()])
+
+        # The good add-on should still have run
+        assert (temp_project / "good_addon_marker").is_file()

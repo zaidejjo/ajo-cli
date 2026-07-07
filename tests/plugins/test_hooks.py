@@ -331,6 +331,116 @@ def pre_scaffold(project_path, env_config):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# Parallel execution
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+class TestParallelHookExecution:
+    """Hooks from independent plugins run concurrently via TaskGroup."""
+
+    @pytest.mark.asyncio
+    async def test_parallel_hooks_all_succeed(self, tmp_path: Path) -> None:
+        """Multiple hooks run to completion in parallel."""
+        manifests = []
+        for name in ["plugin-a", "plugin-b", "plugin-c"]:
+            plugin_dir = tmp_path / name
+            plugin_dir.mkdir()
+            (plugin_dir / "hooks.py").write_text(f"""
+def pre_scaffold(project_path, env_config):
+    pass
+""")
+            manifests.append(
+                PluginManifest(
+                    name=name,
+                    version="1.0.0",
+                    description="",
+                    hooks=["pre_scaffold"],
+                    entry_point="hooks:pre_scaffold",
+                    path=plugin_dir,
+                )
+            )
+        mgr = PluginManager(discovery=_FakeDiscovery(manifests))
+        mgr.load_all()
+        errors = await mgr.execute_pre_scaffold(tmp_path, {})
+        assert errors == []
+
+    @pytest.mark.asyncio
+    async def test_parallel_hooks_concurrent_execution(self, tmp_path: Path) -> None:
+        """Multiple hooks execute concurrently (interleaved, not sequential).
+
+        We use a shared list with a delay to verify interleaving.
+        """
+        import asyncio
+
+        execution_order: list[str] = []
+
+        async def make_hook(name: str, delay: float):
+            async def hook(project_path, env_config):
+                nonlocal execution_order
+                execution_order.append(f"{name}_start")
+                await asyncio.sleep(delay)
+                execution_order.append(f"{name}_end")
+
+            return hook
+
+        # Create hook functions directly (no file loading needed for this test)
+        hook_a = await make_hook("A", 0.1)
+        hook_b = await make_hook("B", 0.05)
+
+        # Manually set up registries
+        mgr = PluginManager(discovery=_FakeDiscovery([]))
+        mgr._manifests = [
+            PluginManifest(name="plugin-a", version="1.0", description=""),
+            PluginManifest(name="plugin-b", version="1.0", description=""),
+        ]
+        mgr._hook_registries = {
+            "plugin-a": {HookType.PRE_SCAFFOLD: hook_a},
+            "plugin-b": {HookType.PRE_SCAFFOLD: hook_b},
+        }
+
+        errors = await mgr.execute_pre_scaffold(tmp_path, {})
+        assert errors == []
+
+        # Both should start before either ends (concurrent execution)
+        assert execution_order.index("A_start") < execution_order.index("A_end")
+        assert execution_order.index("B_start") < execution_order.index("B_end")
+        # B (shorter delay) should end before A (longer delay) if truly parallel
+        assert execution_order.index("B_end") < execution_order.index("A_end")
+
+    @pytest.mark.asyncio
+    async def test_parallel_failures_collected(self, tmp_path: Path) -> None:
+        """Multiple failing hooks all report errors, not just the first."""
+        manifests = []
+        for name in ["fail-a", "fail-b", "ok-c"]:
+            plugin_dir = tmp_path / name
+            plugin_dir.mkdir()
+            code = (
+                "def pre_scaffold(project_path, env_config):\n"
+                f"    raise RuntimeError('{name} failed')"
+                if name.startswith("fail")
+                else "def pre_scaffold(project_path, env_config): pass"
+            )
+            (plugin_dir / "hooks.py").write_text(code)
+            manifests.append(
+                PluginManifest(
+                    name=name,
+                    version="1.0.0",
+                    description="",
+                    hooks=["pre_scaffold"],
+                    entry_point="hooks:pre_scaffold",
+                    path=plugin_dir,
+                )
+            )
+        mgr = PluginManager(discovery=_FakeDiscovery(manifests))
+        mgr.load_all()
+        errors = await mgr.execute_pre_scaffold(tmp_path, {})
+        assert len(errors) == 2
+        error_names = {e.plugin_name for e in errors}
+        assert "fail-a" in error_names
+        assert "fail-b" in error_names
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # PluginManager integration with discovery
 # ═════════════════════════════════════════════════════════════════════════════
 
