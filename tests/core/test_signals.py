@@ -121,3 +121,26 @@ class TestSigintExitCode:
                 _signal_handler(signal.SIGINT, None)
 
         assert stderr.getvalue() == "\n"
+
+    def test_no_handler_registered_does_not_raise(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When no rollback handler is registered, the signal handler
+        does not fail."""
+        import ajo.core.signals
+
+        monkeypatch.setattr(ajo.core.signals, "_rollback_handler", None)
+        with mock.patch.object(sys, "exit"):
+            _signal_handler(signal.SIGINT, None)
+        # Should not raise
+
+    def test_non_callable_handler_ignored(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If the rollback handler is not callable, it is silently ignored."""
+        import ajo.core.signals
+
+        monkeypatch.setattr(ajo.core.signals, "_rollback_handler", "not-a-function")
+        with mock.patch.object(sys, "exit"):
+            _signal_handler(signal.SIGINT, None)
+        # Should not raise

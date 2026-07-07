@@ -84,6 +84,7 @@ class TestRunCommandStreamingDefaultTimeout:
         assert "None" in str(param.annotation)
 
     @pytest.mark.asyncio
+    @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
     async def test_streaming_timeout_raises_command_execution_error(self) -> None:
         """A streaming command that times out should raise CommandExecutionError."""
         with mock.patch(

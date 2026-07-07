@@ -311,3 +311,34 @@ class TestEdgeCases:
 
         assert other_done is True
         assert result.returncode == 0
+
+    @pytest.mark.asyncio
+    async def test_empty_command_raises(self) -> None:
+        """An empty command list raises CommandExecutionError."""
+        from ajo.core.exceptions import CommandExecutionError
+
+        with pytest.raises(CommandExecutionError, match="Empty command"):
+            async with StreamingSubprocess([]) as sp:
+                await sp.wait_for_result()
+
+    @pytest.mark.asyncio
+    async def test_kill_before_start_safe(self) -> None:
+        """Calling _kill_process before the process starts is safe (no-op)."""
+        sp = StreamingSubprocess([sys.executable, "-c", "print('hi')"])
+        # _process is None at this point — should not raise
+        sp._kill_process()
+        # Now actually start and clean up
+        async with sp:
+            result = await sp.wait_for_result()
+        assert result.returncode == 0
+
+    @pytest.mark.asyncio
+    async def test_double_wait_for_result_returns_same_result(self) -> None:
+        """Calling wait_for_result twice returns the same result (not an error)."""
+        async with StreamingSubprocess([sys.executable, "-c", "print('hi')"]) as sp:
+            result1 = await sp.wait_for_result()
+            assert result1.returncode == 0
+            # Second call re-streams the (already-consumed) pipes,
+            # which gracefully returns empty output with the same returncode.
+            result2 = await sp.wait_for_result()
+            assert result2.returncode == 0

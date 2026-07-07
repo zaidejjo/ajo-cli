@@ -287,3 +287,27 @@ class TestEdgeCases:
 
     def test_crashes_dir_default_path(self) -> None:
         assert "crashes" in str(CRASHES_DIR)
+
+    def test_crashes_dir_is_file_handled_gracefully(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If CRASHES_DIR exists as a file (not a directory), write fails
+        gracefully (returns None, does not crash)."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a file where crashes dir should be
+            file_path = Path(tmpdir) / "crashes"
+            file_path.write_text("i am a file, not a directory")
+            monkeypatch.setattr("ajo.core.crash_handler.CRASHES_DIR", file_path)
+            result = write_crash_dump(ValueError("file collision"))
+            # The crash dir is a file, so mkdir will fail (FileExistsError)
+            # and the function returns None gracefully
+            assert result is None
+
+    def test_very_long_exception_message_handled(self) -> None:
+        """Exception messages longer than 1M chars are handled without OOM."""
+        long_msg = "x" * 1_000_000
+        text = _build_dump_text(ValueError(long_msg))
+        assert "ValueError" in text
+        assert long_msg in text

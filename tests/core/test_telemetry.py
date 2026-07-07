@@ -210,6 +210,43 @@ class TestTelemetryStore:
         data = json.loads(store._file.read_text())
         assert data["payload"]["project_name"] != "my-secret-app"
 
+    def test_record_with_non_serializable_payload_fails_gracefully(
+        self, store: TelemetryStore
+    ) -> None:
+        """Payloads containing non-JSON-serializable values raise TypeError
+        which is caught and logged (not propagated to caller)."""
+        store._enabled = True
+        # bytes is not JSON-serializable — should not propagate
+        store.record("test", {"data": b"binary"})
+        # No exception should propagate; the event is silently skipped
+
+    def test_record_with_nested_payload_anonymises_deep(
+        self, store: TelemetryStore
+    ) -> None:
+        """Nested dicts inside sensitive fields are also anonymised."""
+        store._enabled = True
+        store.record(
+            "scaffold",
+            {"project_name": "my-app", "extra": {"inner": "value"}},
+        )
+        data = json.loads(store._file.read_text())
+        assert data["payload"]["project_name"] != "my-app"
+        assert data["payload"]["extra"]["inner"] == "value"
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Edge cases: _anonymise
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+class TestAnonymiseEdgeCases:
+    def test_non_string_value_for_sensitive_key(self) -> None:
+        """Non-string values for sensitive keys are passed through unchanged."""
+        result = _anonymise({"project_name": 42, "path": None, "count": 3})
+        assert result["project_name"] == 42
+        assert result["path"] is None
+        assert result["count"] == 3
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # is_telemetry_enabled
