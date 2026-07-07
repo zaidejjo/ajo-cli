@@ -1288,6 +1288,35 @@ def build_parser() -> argparse.ArgumentParser:
         description="Professional Django scaffolder with Cyberpunk TUI",
         epilog="Run without arguments for interactive mode.",
     )
+
+    # ── Subcommands (doctor, completion, …) ──────────────────────────────
+    # When a subcommand is given (e.g. ``ajo doctor``), ``args.command``
+    # is set to the subcommand name.  When omitted, ``args.command`` is
+    # ``None`` and the existing interactive / headless behaviour applies.
+    subparsers = parser.add_subparsers(dest="command")
+
+    # ``ajo doctor`` — system health check
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="System health check",
+        description="Check all system prerequisites, configuration, and terminal capabilities.",
+    )
+    doctor_parser.set_defaults(command="doctor")
+
+    # ``ajo completion <shell>`` — generate shell completions (placeholder)
+    completion_parser = subparsers.add_parser(
+        "completion",
+        help="Generate shell completions",
+        description="Generate shell completion scripts for bash, zsh, or fish.",
+    )
+    completion_parser.add_argument(
+        "shell",
+        type=str,
+        choices=["bash", "zsh", "fish"],
+        help="Target shell",
+    )
+    completion_parser.set_defaults(command="completion")
+
     parser.add_argument(
         "--version",
         action="store_true",
@@ -1608,8 +1637,8 @@ def _parse_args() -> argparse.Namespace | int | None:
     # This call is idempotent and costs ~0 after the first invocation.
     _ensure_rich_imported()
 
-    # ── Headless mode validation ──────────────────────────────────────────
-    if args.headless or args.yes:
+    # ── Headless mode validation (only when no subcommand) ────────────────
+    if not args.command and (args.headless or args.yes):
         if not args.name and not args.yes:
             show_error("Missing Project Name", "--name is required in headless mode")
             return 11
@@ -1634,6 +1663,27 @@ async def _async_main() -> int:
     if isinstance(result, int):
         return result  # Validation error
     args = result
+
+    # ── Subcommand dispatch (doctor, completion, …) ───────────────────────
+    if args.command is not None:
+        if args.command == "doctor":
+            from ajo.commands.doctor import run as run_doctor
+
+            return run_doctor(args)
+        if args.command == "completion":
+            try:
+                from ajo.commands.completions import run as run_completion
+
+                return run_completion(args)
+            except ImportError:
+                console.print(
+                    "[bold red]Error:[/] Shell completions support is not installed. "
+                    "Run [bold]uv add shtab[/] and try again."
+                )
+                return 1
+        # Unknown subcommand — should not happen with argparse, but safeguard
+        console.print(f"[bold red]Error:[/] Unknown command: {args.command}")
+        return 2
 
     # ── Theme Engine initialisation ──────────────────────────────────────
     engine = ThemeEngine.get_instance()
