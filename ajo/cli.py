@@ -1619,7 +1619,21 @@ def _parse_args() -> argparse.Namespace | int | None:
         - int: Validation error occurred; exit with the returned code.
     """
     parser = build_parser()
-    args = parser.parse_args()
+
+    # Use parse_known_args so we can intercept unknown subcommands for
+    # typo correction before argparse raises SystemExit.
+    args, unknown = parser.parse_known_args()
+
+    # ── Fuzzy typo correction for unknown subcommands ──────────────────
+    if unknown:
+        from ajo.core.typo_correction import check_and_suggest
+
+        if check_and_suggest(unknown[0], parser):
+            # Suggestion printed to stderr — exit with code 2 (usage)
+            return 2
+        # No suggestion found — let argparse show its standard error
+        parser.parse_args()
+        return 2  # never reached (parse_args exits), but satisfies type-checker
 
     # ── Version fast-path ────────────────────────────────────────────────
     # Use raw ``print()`` here — Rich console is NOT loaded at this point
