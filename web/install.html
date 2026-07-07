@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth" data-theme="mac-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Install ajo cli — Django Scaffolder</title>
+
+  <link rel="icon" href="images/logo-removebg-preview.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:           'var(--bg)',
+            'bg-elevated':'var(--bg-elevated)',
+            'bg-panel':   'var(--bg-panel)',
+            'bg-card':    'var(--bg-card)',
+            ink:          'var(--ink)',
+            muted:        'var(--muted)',
+            faint:        'var(--faint)',
+            line:         'var(--line)',
+            line2:        'var(--line2)',
+            accent:       'var(--accent)',
+            'accent-2':   'var(--accent-2)',
+            'accent-3':   'var(--accent-3)',
+            success:      'var(--success)',
+            warning:      'var(--warning)',
+            danger:       'var(--danger)',
+          },
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          boxShadow: {
+            'soft':     '0 2px 8px rgba(0,0,0,0.20), 0 1px 2px rgba(0,0,0,0.10)',
+            'soft-lg':  '0 12px 36px -8px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.15)',
+            'inner-hi': 'inset 0 1px 0 rgba(255,255,255,0.06)',
+            'premium':  '0 24px 70px -12px rgba(0, 0, 0, 0.45)',
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      /* Mac Dark (Apple-inspired) */
+      --bg:           #050506;
+      --bg-elevated:  #0d0d11;
+      --bg-panel:     #121217;
+      --bg-card:      rgba(255,255,255,0.04);
+      --ink:          #f5f5f7;
+      --muted:        #86868b;
+      --faint:        #6e6e73;
+      --line:         rgba(255,255,255,0.06);
+      --line2:        rgba(255,255,255,0.12);
+      --accent:       #0a84ff;
+      --accent-2:     #64d2ff;
+      --accent-3:     #ff9f0a;
+      --success:      #30d158;
+      --warning:      #ffd60a;
+      --danger:       #ff453a;
+    }
+
+    [data-theme="mac-light"] {
+      --bg:           #fafafa;
+      --bg-elevated:  #ffffff;
+      --bg-panel:     #f5f5f7;
+      --bg-card:      rgba(0, 0, 0, 0.03);
+      --ink:          #1d1d1f;
+      --muted:        #6e6e73;
+      --faint:        #86868b;
+      --line:         rgba(0, 0, 0, 0.06);
+      --line2:        rgba(0, 0, 0, 0.12);
+      --accent:       #0070f3;
+      --accent-2:     #00b4d8;
+      --accent-3:     #f59e0b;
+      --success:      #10b981;
+      --warning:      #f59e0b;
+      --danger:       #ef4444;
+    }
+
+    [data-theme="catppuccin"] {
+      --bg:           #1e1e2e;
+      --bg-elevated:  #181825;
+      --bg-panel:     #313244;
+      --bg-card:      rgba(255,255,255,0.025);
+      --ink:          #cdd6f4;
+      --muted:        #a6adc8;
+      --faint:        #6c7086;
+      --line:         rgba(255,255,255,0.05);
+      --line2:        rgba(255,255,255,0.09);
+      --accent:       #89b4fa;
+      --accent-2:     #cba6f7;
+      --accent-3:     #f5c2e7;
+      --success:      #a6e3a1;
+      --warning:      #f9e2af;
+      --danger:       #f38ba8;
+    }
+
+    html { background: var(--bg); }
+    body {
+      background:
+        radial-gradient(1200px 600px at 75% -10%, color-mix(in srgb, var(--accent) 7%, transparent) 0%, transparent 60%),
+        radial-gradient(900px 500px at 0% 30%, color-mix(in srgb, var(--accent-2) 5%, transparent) 0%, transparent 55%),
+        var(--bg);
+      color: var(--ink);
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color 0.4s ease, color 0.4s ease;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: var(--line2);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: padding-box; }
+
+    /* Selection */
+    ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); color: var(--ink); }
+
+    /* Frosted glass */
+    .glass {
+      background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      transition: transform .25s ease, border-color .25s ease, background .25s ease, box-shadow .25s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--line2);
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
+    }
+
+    /* Primary button */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.005em;
+      transition: transform .15s ease, opacity .15s ease;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 1px 2px rgba(0,0,0,0.25);
+    }
+    .btn-primary:hover { transform: translateY(-1px); opacity: 0.9; }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 500;
+      transition: all .15s ease;
+    }
+    .btn-ghost:hover { border-color: var(--line2); background: color-mix(in srgb, var(--accent) 6%, var(--bg-card)); }
+
+    /* Pill / tag */
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    /* Eyebrow */
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px 4px 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* Terminal */
+    .terminal {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--soft-lg);
+      overflow: hidden;
+    }
+    .terminal-titlebar {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg-panel);
+    }
+    .terminal-titlebar .traffic { display: inline-flex; gap: 8px; }
+    .terminal-titlebar .title { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
+
+    /* Code block */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.86em;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      color: var(--accent);
+    }
+  </style>
+</head>
+
+<body class="relative min-h-screen overflow-x-hidden">
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="sticky top-0 z-50 glass border-b border-[color:var(--line)]">
+    <div class="max-w-7xl mx-auto px-5 lg:px-8 py-3 flex items-center justify-between gap-6">
+
+      <!-- Logo -->
+      <a href="index.html" class="flex items-center gap-2.5 group">
+          <img src="images/logo_images.svg" alt=""
+               class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[color:var(--accent)] text-white font-bold text-[13px] tracking-tight shadow-soft">
+        <span class="font-bold text-[15px] tracking-tight">ajo</span>
+      </a>
+
+      <!-- Nav -->
+      <nav class="hidden md:flex items-center gap-1 text-[13px]">
+        <a href="index.html" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Home</a>
+        <a href="index.html#presets" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Presets</a>
+        <a href="index.html#installation" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Installation</a>
+      </nav>
+
+      <!-- Right -->
+      <div class="flex items-center gap-2">
+        <button id="theme-toggle" class="btn-ghost !py-1.5 !px-2.5" title="Switch theme">
+          <i data-lucide="moon-star" class="w-4 h-4"></i>
+          <span id="theme-label" class="hidden sm:inline text-[12px] font-medium">Light Dark</span>
+        </button>
+        <a href="https://github.com/zaidejjo/ajo-cli" target="_blank" rel="noopener noreferrer" class="btn-ghost !py-1.5 !px-2.5" title="GitHub">
+            <svg class="w-4 h-4 fill-white" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+            </svg>
+          <span class="hidden sm:inline text-[12px] font-medium">GitHub</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="max-w-7xl mx-auto px-5 lg:px-8 py-14 space-y-24">
+
+    <!-- Hero Section -->
+    <section class="text-center space-y-6 pt-6">
+      <span class="eyebrow"><i data-lucide="sparkles" class="w-3 h-3"></i> Installation Guide</span>
+      <h1 class="text-5xl lg:text-6xl font-bold tracking-tight">Get <span class="text-[color:var(--accent)]">ajo-cli</span> running.</h1>
+      <p class="text-[15px] text-[color:var(--muted)] leading-relaxed max-w-2xl mx-auto">
+        Choose your platform and run the one-liner to start scaffolding production-ready Django projects in seconds.
+      </p>
+    </section>
+
+    <!-- Installation Steps -->
+    <section class="space-y-12">
+      
+      <!-- Unix/macOS -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="icon-box"><i data-lucide="terminal" class="w-5 h-5"></i></div>
+          <h2 class="text-2xl font-bold">Linux & macOS</h2>
+        </div>
+        <div class="card p-6 space-y-4">
+          <p class="text-[14px] text-[color:var(--muted)]">Run this command in your terminal to install via <code>sh</code>:</p>
+          <div class="flex items-center justify-between gap-3 rounded-xl bg-[color:var(--bg-elevated)] border border-[color:var(--line)] px-4 py-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-[color:var(--accent)] font-mono font-semibold select-none">$</span>
+              <code class="font-mono text-[13px] truncate text-[color:var(--ink)]">curl -fsSL https://ajo-cli.pages.dev/install | sh</code>
+            </div>
+            <button class="copy-btn shrink-0 p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors" data-cmd="curl -fsSL https://ajo-cli.pages.dev/install | sh">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="text-[12px] text-[color:var(--faint)]">
+            Supports: <code>bash</code>, <code>zsh</code>, <code>sh</code>. Requires <code>Python 3.8+</code> and <code>pip</code>.
+          </div>
+        </div>
+      </div>
+
+      <!-- Windows -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="icon-box"><i data-lucide="monitor" class="w-5 h-5"></i></div>
+          <h2 class="text-2xl font-bold">Windows</h2>
+        </div>
+        <div class="card p-6 space-y-4">
+          <p class="text-[14px] text-[color:var(--muted)]">Open <strong>PowerShell</strong> and run this command:</p>
+          <div class="flex items-center justify-between gap-3 rounded-xl bg-[color:var(--bg-elevated)] border border-[color:var(--line)] px-4 py-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-[color:var(--accent)] font-mono font-semibold select-none">PS &gt;</span>
+              <code class="font-mono text-[13px] truncate text-[color:var(--ink)]">iwr -useb https://ajo-cli.pages.dev/install.ps1 | iex</code>
+            </div>
+            <button class="copy-btn shrink-0 p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors" data-cmd="iwr -useb https://ajo-cli.pages.dev/install.ps1 | iex">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="text-[12px] text-[color:var(--faint)]">
+            Requires: <code>PowerShell 5.1+</code> and <code>Python 3.8+</code>.
+          </div>
+        </div>
+      </div>
+
+      <!-- System Requirements -->
+      <div class="space-y-6">
+        <h3 class="text-xl font-bold text-center">System Requirements</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="card p-5 text-center space-y-2">
+            <i data-lucide="code-2" class="w-6 h-6 mx-auto text-[color:var(--accent)]"></i>
+            <h4 class="font-semibold">Python</h4>
+            <p class="text-[13px] text-[color:var(--muted)]">Version 3.8 or higher</p>
+          </div>
+          <div class="card p-5 text-center space-y-2">
+            <i data-lucide="package" class="w-6 h-6 mx-auto text-[color:var(--accent-2)]"></i>
+            <h4 class="font-semibold">Pip / UV</h4>
+            <p class="text-[13px] text-[color:var(--muted)]">Package manager installed</p>
+          </div>
+          <div class="card p-5 text-center space-y-2">
+            <i data-lucide="git-branch" class="w-6 h-6 mx-auto text-[color:var(--accent-3)]"></i>
+            <h4 class="font-semibold">Git</h4>
+            <p class="text-[13px] text-[color:var(--muted)]">For plugin discovery</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verification -->
+      <div class="card p-8 text-center space-y-6 bg-gradient-to-b from-[color:var(--bg-card)] to-transparent">
+        <div class="space-y-2">
+          <h3 class="text-2xl font-bold">All set?</h3>
+          <p class="text-[15px] text-[color:var(--muted)]">Verify your installation by running the following command:</p>
+        </div>
+        <div class="inline-flex items-center gap-3 rounded-xl bg-[color:var(--bg-elevated)] border border-[color:var(--line)] px-6 py-3 font-mono text-[14px]">
+          <span class="text-[color:var(--accent)]">$</span>
+          <span>ajo --version</span>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="border-t border-[color:var(--line)] mt-8">
+    <div class="max-w-7xl mx-auto px-5 lg:px-8 py-10 flex flex-col md:flex-row items-center justify-between gap-5">
+      <div class="flex items-center gap-3 text-[13px] text-[color:var(--muted)]">
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-[color:var(--accent)] text-white font-bold text-[10px]">aj</span>
+        <span>Built with</span>
+        <i data-lucide="heart" class="w-3.5 h-3.5 text-[color:var(--accent-3)]"></i>
+        <span>Python 3.10+ · Django 5.0+ · uv · Ruff</span>
+      </div>
+
+      <div class="flex items-center gap-5 text-[12px] text-[color:var(--muted)] font-medium">
+        <a href="index.html" class="hover:text-[color:var(--ink)] transition-colors">Home</a>
+        <a href="https://github.com/zaidejjo/ajo-cli" class="hover:text-[color:var(--ink)] transition-colors flex items-center gap-1.5">
+            <svg class="w-4 h-4 fill-white" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+            </svg> GitHub
+        </a>
+      </div>
+    </div>
+    <div class="text-center pb-6 text-[10px] uppercase tracking-[0.2em] text-[color:var(--faint)]">
+      © 2026 AJO CLI · MIT License
+    </div>
+  </footer>
+
+  <!-- ===================== JS ===================== -->
+  <script>
+    // Init icons
+    lucide.createIcons();
+
+    // ===== Theme toggle =====
+    const themes = ['light-dark', 'catppuccin'];
+    const themeNames = { 'light-dark': 'Light Dark', 'catppuccin': 'Catppuccin' };
+    const themeIcons = { 'light-dark': 'moon-star', 'catppuccin': 'palette' };
+    let themeIndex = 0;
+
+    const saved = localStorage.getItem('ajo-theme');
+    if (saved && themes.includes(saved)) {
+      themeIndex = themes.indexOf(saved);
+      applyTheme(saved, false);
+    }
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      themeIndex = (themeIndex + 1) % themes.length;
+      applyTheme(themes[themeIndex]);
+    });
+
+    function applyTheme(name) {
+      if (name === 'light-dark') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', name);
+      }
+      localStorage.setItem('ajo-theme', name);
+      const lbl = document.getElementById('theme-label');
+      lbl.textContent = themeNames[name];
+      const btn = document.getElementById('theme-toggle');
+      const icon = btn.querySelector('[data-lucide]');
+      if (icon) icon.setAttribute('data-lucide', themeIcons[name]);
+      lucide.createIcons();
+    }
+
+    // ===== Copy utilities =====
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); return true; }
+      catch (e) { console.error(e); return false; }
+    }
+
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const cmd = btn.getAttribute('data-cmd');
+        const ok = await copyText(cmd);
+        const icon = btn.querySelector('[data-lucide]');
+        if (ok) {
+          icon.setAttribute('data-lucide', 'check');
+          lucide.createIcons();
+          setTimeout(() => { icon.setAttribute('data-lucide', 'copy'); lucide.createIcons(); }, 1500);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

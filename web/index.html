@@ -161,23 +161,6 @@
       box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
     }
 
-    /* mac-style segmented tab pills */
-    .tab-pill {
-      padding: 7px 14px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--muted);
-      transition: all .15s ease;
-      letter-spacing: 0.005em;
-    }
-    .tab-pill:hover { color: var(--ink); }
-    .tab-pill.active {
-      background: var(--bg-panel);
-      color: var(--ink);
-      box-shadow: var(--inner-hi), 0 1px 2px rgba(0,0,0,0.20);
-    }
-
     /* Primary button */
     .btn-primary {
       display: inline-flex; align-items: center; gap: 8px;
@@ -366,12 +349,9 @@
     <div class="max-w-7xl mx-auto px-5 lg:px-8 py-3 flex items-center justify-between gap-6">
 
       <!-- Logo -->
-      <a href="#" class="flex items-center gap-2.5 group">
+      <a href="index.html" class="flex items-center gap-2.5 group">
           <img src="images/logo_images.svg" alt=""
                class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[color:var(--accent)] text-white font-bold text-[13px] tracking-tight shadow-soft">
-        <!--<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[color:var(--accent)] text-white font-bold text-[13px] tracking-tight shadow-soft">
-          aj
-        </span>-->
         <span class="font-bold text-[15px] tracking-tight">ajo</span>
         <span class="pill !text-[10px] !py-0.5 !px-2 text-[color:var(--muted)]">
           v3.4.0
@@ -380,9 +360,10 @@
 
       <!-- Nav -->
       <nav class="hidden md:flex items-center gap-1 text-[13px]">
-        <a href="#presets" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Presets</a>
-        <a href="#installation" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Installation</a>
-        <a href="#diagnostics" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Diagnostics</a>
+        <a href="index.html" class="px-3 py-1.5 rounded-md text-[color:var(--ink)] bg-[color:var(--bg-panel)] transition-colors">Home</a>
+        <a href="index.html#presets" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Presets</a>
+        <a href="index.html#installation" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Installation</a>
+        <a href="index.html#diagnostics" class="px-3 py-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors">Diagnostics</a>
       </nav>
 
       <!-- Right -->
@@ -703,34 +684,92 @@
         <span class="eyebrow"><i data-lucide="download" class="w-3 h-3"></i>Getting started</span>
         <h2 class="text-4xl font-bold tracking-tight">Install once. <span class="text-[color:var(--accent)]">Scaffold forever.</span></h2>
         <p class="text-[15px] text-[color:var(--muted)]">
-          Pick your favorite package manager. We recommend isolated environments — uv or pipx.
+          Choose your platform and run the one-liner to get started in seconds.
         </p>
       </div>
 
-      <div class="max-w-3xl mx-auto">
-        <!-- Tabs -->
-        <div class="flex flex-wrap items-center gap-1 p-1 rounded-2xl bg-[color:var(--bg-card)] border border-[color:var(--line)] w-fit mx-auto mb-4">
-          <button class="tab-pill active" data-tab="uv">uv tool</button>
-          <button class="tab-pill" data-tab="pipx">pipx / pip</button>
-          <button class="tab-pill" data-tab="aur">AUR</button>
-          <button class="tab-pill" data-tab="source">From source</button>
+      <div class="max-w-3xl mx-auto space-y-8">
+
+        <!-- Unix/macOS -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="icon-box"><i data-lucide="terminal" class="w-5 h-5"></i></div>
+            <h3 class="text-xl font-bold">Linux & macOS</h3>
+          </div>
+          <div class="card p-5 space-y-3">
+            <p class="text-[14px] text-[color:var(--muted)]">Run this command in your terminal:</p>
+            <div class="flex items-center justify-between gap-3 rounded-xl bg-[color:var(--bg-elevated)] border border-[color:var(--line)] px-4 py-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="text-[color:var(--accent)] font-mono font-semibold select-none">$</span>
+                <code class="font-mono text-[13px] truncate text-[color:var(--ink)]">curl -fsSL https://ajo-cli.pages.dev/install | sh</code>
+              </div>
+              <button class="copy-btn shrink-0 p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors" data-cmd="curl -fsSL https://ajo-cli.pages.dev/install | sh">
+                <i data-lucide="copy" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div class="text-[12px] text-[color:var(--faint)]">
+              Supports: <code>bash</code>, <code>zsh</code>, <code>sh</code>. Requires <code>Python 3.8+</code> and <code>pip</code>.
+            </div>
+          </div>
         </div>
 
-        <!-- Terminal block -->
-        <div class="terminal">
-          <div class="terminal-titlebar">
-            <div class="traffic">
-              <span class="tl" style="background:#ff5f57"></span>
-              <span class="tl" style="background:#febc2e"></span>
-              <span class="tl" style="background:#28c840"></span>
-            </div>
-            <span class="title" id="install-title">uv — install ajo-cli</span>
-            <button id="copy-install" class="ml-auto p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors" title="Copy">
-              <i data-lucide="copy" class="w-4 h-4"></i>
-            </button>
+        <!-- Windows -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="icon-box"><i data-lucide="monitor" class="w-5 h-5"></i></div>
+            <h3 class="text-xl font-bold">Windows</h3>
           </div>
-          <pre id="code-block" class="m-0 p-6 font-mono text-[13px] leading-relaxed overflow-x-auto text-[color:var(--ink)]/90 whitespace-pre"></pre>
+          <div class="card p-5 space-y-3">
+            <p class="text-[14px] text-[color:var(--muted)]">Open <strong>PowerShell</strong> and run this command:</p>
+            <div class="flex items-center justify-between gap-3 rounded-xl bg-[color:var(--bg-elevated)] border border-[color:var(--line)] px-4 py-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="text-[color:var(--accent)] font-mono font-semibold select-none">PS &gt;</span>
+                <code class="font-mono text-[13px] truncate text-[color:var(--ink)]">iwr -useb https://ajo-cli.pages.dev/install.ps1 | iex</code>
+              </div>
+              <button class="copy-btn shrink-0 p-1.5 rounded-md text-[color:var(--muted)] hover:text-[color:var(--ink)] hover:bg-[color:var(--bg-card)] transition-colors" data-cmd="iwr -useb https://ajo-cli.pages.dev/install.ps1 | iex">
+                <i data-lucide="copy" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div class="text-[12px] text-[color:var(--faint)]">
+              Requires: <code>PowerShell 5.1+</code> and <code>Python 3.8+</code>.
+            </div>
+          </div>
         </div>
+
+        <!-- System Requirements -->
+        <div class="space-y-4 pt-4">
+          <h3 class="text-lg font-bold text-center">System Requirements</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="card p-5 text-center space-y-2">
+              <i data-lucide="code-2" class="w-6 h-6 mx-auto text-[color:var(--accent)]"></i>
+              <h4 class="font-semibold">Python</h4>
+              <p class="text-[13px] text-[color:var(--muted)]">Version 3.8 or higher</p>
+            </div>
+            <div class="card p-5 text-center space-y-2">
+              <i data-lucide="package" class="w-6 h-6 mx-auto text-[color:var(--accent-2)]"></i>
+              <h4 class="font-semibold">Pip / UV</h4>
+              <p class="text-[13px] text-[color:var(--muted)]">Package manager installed</p>
+            </div>
+            <div class="card p-5 text-center space-y-2">
+              <i data-lucide="git-branch" class="w-6 h-6 mx-auto text-[color:var(--accent-3)]"></i>
+              <h4 class="font-semibold">Git</h4>
+              <p class="text-[13px] text-[color:var(--muted)]">For plugin discovery</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verification -->
+        <div class="card p-8 text-center space-y-5 bg-gradient-to-b from-[color:var(--bg-card)] to-transparent">
+          <div class="space-y-2">
+            <h3 class="text-2xl font-bold">All set?</h3>
+            <p class="text-[15px] text-[color:var(--muted)]">Verify your installation by running:</p>
+          </div>
+          <div class="inline-flex items-center gap-3 rounded-xl bg-[color:var(--bg-elevated)] border border-[color:var(--line)] px-6 py-3 font-mono text-[14px]">
+            <span class="text-[color:var(--accent)]">$</span>
+            <span>ajo --version</span>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -890,82 +929,31 @@
       catch (e) { console.error(e); return false; }
     }
 
-    document.getElementById('copy-btn-hero').addEventListener('click', async (e) => {
-      const ok = await copyText(document.getElementById('quick-install-cmd').textContent.trim());
-      const btn = e.currentTarget;
-      const icon = btn.querySelector('[data-lucide]');
-      if (ok) {
-        icon.setAttribute('data-lucide', 'check');
-        lucide.createIcons();
-        setTimeout(() => { icon.setAttribute('data-lucide', 'copy'); lucide.createIcons(); }, 1500);
-      }
-    });
+     document.getElementById('copy-btn-hero').addEventListener('click', async (e) => {
+       const ok = await copyText(document.getElementById('quick-install-cmd').textContent.trim());
+       const btn = e.currentTarget;
+       const icon = btn.querySelector('[data-lucide]');
+       if (ok) {
+         icon.setAttribute('data-lucide', 'check');
+         lucide.createIcons();
+         setTimeout(() => { icon.setAttribute('data-lucide', 'copy'); lucide.createIcons(); }, 1500);
+       }
+     });
 
-    // ===== Installation tabs =====
-    const codeSnippets = {
-      uv: `# Recommended as an isolated tool
-uv tool install ajo-cli
+     document.querySelectorAll('.copy-btn').forEach(btn => {
+       btn.addEventListener('click', async (e) => {
+         const cmd = btn.getAttribute('data-cmd');
+         const ok = await copyText(cmd);
+         const icon = btn.querySelector('[data-lucide]');
+         if (ok) {
+           icon.setAttribute('data-lucide', 'check');
+           lucide.createIcons();
+           setTimeout(() => { icon.setAttribute('data-lucide', 'copy'); lucide.createIcons(); }, 1500);
+         }
+       });
+     });
 
-# Run ajo
-ajo`,
-      pipx: `# Recommended — isolated environment
-pipx install ajo-cli
-
-# Or globally with pip
-pip install ajo-cli
-
-# Run ajo
-ajo`,
-      aur: `# Install using yay
-yay -S ajo-cli
-
-# Or using paru
-paru -S ajo-cli`,
-      source: `# Clone the repository
-git clone https://github.com/zaidejjo/ajo-cli.git
-cd ajo-cli
-
-# Sync deps & install with uv
-uv sync && uv tool install . --force
-
-# Run ajo
-ajo`
-    };
-    const tabTitles = {
-      uv: 'uv — install ajo-cli',
-      pipx: 'pipx — install ajo-cli',
-      aur: 'AUR — install ajo-cli',
-      source: 'git — install ajo-cli from source'
-    };
-
-    let activeTab = 'uv';
-    function setCode(tab) {
-      document.getElementById('code-block').textContent = codeSnippets[tab];
-      document.getElementById('install-title').textContent = tabTitles[tab];
-    }
-    setCode('uv');
-
-    document.querySelectorAll('[data-tab]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        activeTab = btn.dataset.tab;
-        setCode(activeTab);
-      });
-    });
-
-    document.getElementById('copy-install').addEventListener('click', async (e) => {
-      const ok = await copyText(codeSnippets[activeTab]);
-      const btn = e.currentTarget;
-      const icon = btn.querySelector('[data-lucide]');
-      if (ok) {
-        icon.setAttribute('data-lucide', 'check');
-        lucide.createIcons();
-        setTimeout(() => { icon.setAttribute('data-lucide', 'copy'); lucide.createIcons(); }, 1500);
-      }
-    });
-
-    // ===== Terminal simulator =====
+     // ===== Terminal simulator =====
     const terminal = document.getElementById('terminal-screen');
     let termTimers = [];
 
