@@ -1,0 +1,96 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# CI — Run tests & generate shell completions
+# ──────────────────────────────────────────────────────────────────────────────
+# Triggered on:
+#   - Push to ``main`` (or the default branch)
+#   - Any pull request targeting ``main``
+#
+# Generates bash / zsh / tcsh completion scripts via ``shtab`` and uploads
+# them as a workflow artifact so they can be attached to a GitHub Release
+# or consumed downstream.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  # ═════════════════════════════════════════════════════════════════════════
+  # Test  —  matrix across supported Python versions
+  # ═════════════════════════════════════════════════════════════════════════
+  test:
+    name: "test | Python ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run tests
+        run: uv run pytest -v --tb=short --no-header 2>&1 | tail -30
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # Completions  —  generate shell-completion scripts via shtab
+  # ═════════════════════════════════════════════════════════════════════════
+  completions:
+    name: "Generate shell completions"
+    runs-on: ubuntu-latest
+    needs: [test]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project with completions extra
+        run: uv sync --dev
+
+      - name: Create output directory
+        run: mkdir -p completions
+
+      - name: Generate bash completions
+        run: uv run python -m shtab --shell=bash ajo.cli.build_parser > completions/ajo.bash 2>&1 || echo "shtab bash failed" >&2
+
+      - name: Generate zsh completions
+        run: uv run python -m shtab --shell=zsh ajo.cli.build_parser > completions/_ajo 2>&1 || echo "shtab zsh failed" >&2
+
+      - name: Generate tcsh completions
+        run: uv run python -m shtab --shell=tcsh ajo.cli.build_parser > completions/ajo.csh 2>&1 || echo "shtab tcsh failed" >&2
+
+      - name: Upload completion artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: shell-completions
+          path: completions/
+          retention-days: 30

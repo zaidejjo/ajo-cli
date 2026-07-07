@@ -31,6 +31,7 @@ DEFAULT_CONFIG: dict = {
     "version": 1,
     "nerd_fonts": None,  # None = unset (prompt on first interactive use)
     "theme": None,
+    "check_updates": True,
     "updated_at": None,
 }
 

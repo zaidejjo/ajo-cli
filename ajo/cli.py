@@ -21,6 +21,14 @@ from typing import Any, Dict, List, Optional, Tuple
 # Local imports (stdlib-only or very lightweight)
 from ajo import __version__
 from ajo.core.app import async_entry
+from ajo.core.color_control import (
+    UNSET,
+    _Unset,
+    configure_console,
+    resolve_color_preference,
+    should_disable_progress,
+)
+from ajo.core.logging_config import setup_logging
 from ajo.core.constants import NF, Theme, ThemeVariant, icon, qmark
 from ajo.core.exceptions import AjoError, PresetError
 
@@ -38,6 +46,23 @@ from ajo.core.lazy_imports import LazyImportTracker, lazy_attr
 # actually accessed.
 
 _all_loaded: bool = False
+_no_color_flag: bool | _Unset = UNSET
+_color_flag: str | _Unset = UNSET
+
+
+def _set_color_flags(
+    *, no_color: bool | _Unset = UNSET, color: str | _Unset = UNSET
+) -> None:
+    """Store colour-preference flags so ``_ensure_rich_imported`` can read them.
+
+    Must be called **before** the first access to ``console`` (i.e. before
+    :func:`_ensure_rich_imported` triggers).
+    """
+    global _no_color_flag, _color_flag
+    if no_color is not UNSET:
+        _no_color_flag = no_color
+    if color is not UNSET:
+        _color_flag = color
 
 
 def _ensure_rich_imported() -> None:
@@ -68,6 +93,7 @@ def _ensure_rich_imported() -> None:
 
     # Rich
     RichConsole = lazy_attr("rich.console", "Console")
+    Console = RichConsole
     Live = lazy_attr("rich.live", "Live")
     Panel = lazy_attr("rich.panel", "Panel")
     Spinner = lazy_attr("rich.spinner", "Spinner")
@@ -177,8 +203,9 @@ def _ensure_rich_imported() -> None:
     global AppNameValidator
     AppNameValidator = _AppNameValidator
 
-    # Global console
-    console = RichConsole()
+    # Global console (respects NO_COLOR / FORCE_COLOR / --no-color)
+    global _no_color_flag, _color_flag
+    console = configure_console(no_color=_no_color_flag, color=_color_flag)
     _all_loaded = True
 
 
@@ -648,6 +675,7 @@ def setup_github(project_path: Path, project_name: str) -> bool:
         SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
         TextColumn("[progress.description]{task.description}"),
         console=console,
+        disable=should_disable_progress(),
         transient=False,
     ) as progress:
         task = progress.add_task("Creating repository...", total=None)
@@ -1090,6 +1118,7 @@ async def _run_subprocess(
         SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
         TextColumn(f"[progress.description]{{task.description}}"),
         console=console,
+        disable=should_disable_progress(),
         transient=True,
     ) as progress:
         task = progress.add_task(
@@ -1175,6 +1204,7 @@ def create_apps_loop(scaffolder):
             SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
             TextColumn("[progress.description]{task.description}"),
             console=console,
+            disable=should_disable_progress(),
             transient=False,
         ) as progress:
             task = progress.add_task(f"Creating app '{app_name}'...", total=None)
@@ -1248,6 +1278,38 @@ def show_completion(
 # =============================================================================
 
 
+def _make_usage_examples() -> str:
+    """Build a rich usage examples section for the main parser epilog."""
+    return (
+        "\n"
+        "Examples:\n"
+        "  Interactive mode (no arguments required):\n"
+        "    ajo\n"
+        "\n"
+        "  Quick-start a new project with defaults:\n"
+        "    ajo --yes --name myproject\n"
+        "\n"
+        "  Full headless scaffold with preset and add-ons:\n"
+        "    ajo --name myblog --preset rest-api --database postgresql \\\n"
+        "      --addons auth cache security --yes\n"
+        "\n"
+        "  Preview planned files without writing:\n"
+        "    ajo --name myproject --dry-run\n"
+        "\n"
+        "  Evaluate existing Django project health:\n"
+        "    ajo scan\n"
+        "\n"
+        "  Generate a shareable diagnostic report:\n"
+        "    ajo report --output report.md\n"
+        "\n"
+        "  Check for updates without upgrading:\n"
+        "    ajo upgrade --check\n"
+        "\n"
+        "  See version information (fast, no imports):\n"
+        "    ajo --version\n"
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser.
 
@@ -1260,23 +1322,197 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ajo",
         description="Professional Django scaffolder with Cyberpunk TUI",
-        epilog="Run without arguments for interactive mode.",
+        epilog=_make_usage_examples(),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+
+    # ── Subcommands (doctor, completion, …) ──────────────────────────────
+    # When a subcommand is given (e.g. ``ajo doctor``), ``args.command``
+    # is set to the subcommand name.  When omitted, ``args.command`` is
+    # ``None`` and the existing interactive / headless behaviour applies.
+    subparsers = parser.add_subparsers(dest="command", title="Commands")
+
+    # ``ajo doctor`` — system health check
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="System health check",
+        description=(
+            "Check all system prerequisites, configuration, and terminal"
+            " capabilities.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo doctor\n"
+            "  ajo self-check\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    doctor_parser.set_defaults(command="doctor")
+
+    # ``ajo self-check`` — alias for ``ajo doctor``
+    self_check_parser = subparsers.add_parser(
+        "self-check",
+        help="System health check (alias for doctor)",
+        description=(
+            "Alias for ``ajo doctor`` — check system prerequisites,"
+            " configuration, and terminal capabilities.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo self-check\n"
+            "  ajo doctor\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    self_check_parser.set_defaults(command="doctor")
+
+    # ``ajo completion <shell>`` — generate shell completions (placeholder)
+    completion_parser = subparsers.add_parser(
+        "completion",
+        help="Generate shell completions",
+        description=(
+            "Generate shell completion scripts for bash, zsh, or tcsh.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo completion bash  > /etc/bash_completion.d/ajo\n"
+            "  ajo completion zsh   > /usr/local/share/zsh/site-functions/_ajo\n"
+            "  ajo completion tcsh  > ~/.tcshrc\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    completion_parser.add_argument(
+        "shell",
+        type=str,
+        choices=["bash", "zsh", "tcsh"],
+        help="Target shell (supported: bash, zsh, tcsh)",
+    )
+    completion_parser.set_defaults(command="completion")
+
+    # ``ajo upgrade [--check]`` — self-update
+    upgrade_parser = subparsers.add_parser(
+        "upgrade",
+        help="Update ajo-cli to the latest version",
+        description=(
+            "Check PyPI for a newer release and upgrade using the"
+            " appropriate package manager for your environment (uv, pipx,"
+            " or pip).\n"
+            "\n"
+            "Examples:\n"
+            "  ajo upgrade             Upgrade to the latest version\n"
+            "  ajo upgrade --check     Only check for available updates\n"
+            "  ajo upgrade --yes       Skip confirmation prompt\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    upgrade_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Only check for updates; do not perform the upgrade",
+    )
+    upgrade_parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompt",
+    )
+    upgrade_parser.set_defaults(command="upgrade")
+
+    # ``ajo changelog [--latest]`` — display changelog
+    changelog_parser = subparsers.add_parser(
+        "changelog",
+        help="Display the project changelog",
+        description=(
+            "Show the local CHANGELOG.md or fetch the latest release"
+            " notes from GitHub.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo changelog          Full changelog\n"
+            "  ajo changelog --latest  Only the most recent release\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    changelog_parser.add_argument(
+        "--latest",
+        action="store_true",
+        help="Show only the most recent entry / release",
+    )
+    changelog_parser.set_defaults(command="changelog")
+
+    # ``ajo scan [--json]`` — project health card
+    scan_parser = subparsers.add_parser(
+        "scan",
+        help="Display a project health card",
+        description=(
+            "Inspect the current Django project and display a"
+            " formatted summary including Django version, model count,"
+            " installed apps, middleware, URL patterns, and environment"
+            " context.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo scan                  Pretty-printed health card\n"
+            "  ajo scan --json           Machine-readable JSON output\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    scan_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON instead of a formatted health card",
+    )
+    scan_parser.set_defaults(command="scan")
+
+    # ``ajo report [--output <file>] [--clipboard] [--stdout]`` — diagnostic
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Generate a comprehensive diagnostic report",
+        description=(
+            "Generate a shareable diagnostic report containing OS,"
+            " Python, ajo, terminal, config (secrets redacted), Django"
+            " project info, and update status.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo report                     Print to stdout\n"
+            "  ajo report --output report.md  Save as Markdown file\n"
+            "  ajo report --output report.json  Save as JSON\n"
+            "  ajo report --clipboard         Copy to system clipboard\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    report_output_group = report_parser.add_mutually_exclusive_group()
+    report_output_group.add_argument(
+        "--stdout",
+        action="store_true",
+        help="Print report to stdout (default behaviour)",
+    )
+    report_output_group.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        metavar="FILE",
+        help="Save report to a file (.json or .md extension)",
+    )
+    report_parser.add_argument(
+        "--clipboard",
+        action="store_true",
+        help="Copy report to the system clipboard (requires pyperclip)",
+    )
+    report_parser.set_defaults(command="report")
+
     parser.add_argument(
         "--version",
         action="store_true",
-        help="Show version and exit",
+        help="Show ajo version and exit immediately (fast, no imports)",
     )
     parser.add_argument(
         "--headless",
         action="store_true",
-        help="Non-interactive mode (requires --name)",
+        dest="headless",
+        help="Non-interactive mode (requires --name). Useful for CI/CD.",
     )
     parser.add_argument(
         "-n",
         "--name",
         type=str,
-        help="Project name (required with --headless)",
+        metavar="NAME",
+        help="Project name (required with --headless). Use snake_case or kebab-case.",
     )
     parser.add_argument(
         "-p",
@@ -1294,7 +1530,10 @@ def build_parser() -> argparse.ArgumentParser:
             "fullstack",
         ],
         default="monolith",
-        help="Architecture preset (default: monolith)",
+        help="Architecture preset: standard Django (monolith), "
+        "DRF (rest-api), django-ninja (ninja-api), GraphQL (graphql-api), "
+        "or Docker-based (docker). Aliases: rest, ninja, graphql. "
+        "(default: monolith)",
     )
     parser.add_argument(
         "-d",
@@ -1302,49 +1541,94 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         choices=["sqlite", "postgresql", "mysql"],
         default="sqlite",
-        help="Database type (default: sqlite)",
+        help="Database backend: sqlite (dev), postgresql, or mysql. (default: sqlite)",
     )
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Accept all defaults (implies --headless)",
+        help="Accept all defaults non-interactively (implies --headless)",
     )
     parser.add_argument(
         "--no-github",
         action="store_true",
-        help="Skip GitHub setup",
+        help="Skip GitHub repository creation and push",
     )
     parser.add_argument(
         "--no-cicd",
         action="store_true",
-        help="Skip CI/CD setup",
+        help="Skip GitHub Actions CI/CD workflow generation",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path.cwd(),
-        help="Parent directory for the project (default: current dir)",
+        metavar="DIR",
+        help="Parent directory for the scaffolded project "
+        "(default: current working directory)",
     )
     parser.add_argument(
         "--theme",
         type=str,
         choices=["cyberpunk", "dracula", "monochromatic", "mono"],
         default="cyberpunk",
-        help="Visual theme (default: cyberpunk)",
+        help="Visual TUI theme. Choices: cyberpunk, dracula, "
+        "monochromatic/mono. (default: cyberpunk)",
     )
     parser.add_argument(
         "--addons",
         type=str,
         nargs="*",
         default=None,
-        help="Add-on modules to include (e.g. auth cache security testing)",
+        metavar="ADDON",
+        help="Add-on modules to include. Space-separated list. "
+        "Available: auth, cache, security, testing. "
+        "(e.g. --addons auth cache)",
     )
     parser.add_argument(
         "--no-addons",
         action="store_true",
         dest="no_addons",
-        help="Skip all add-on modules",
+        help="Skip all add-on modules explicitly",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        default=False,
+        help="Preview files and execution plan without writing anything",
+    )
+    # ── Colour / ANSI control ────────────────────────────────────────────
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        dest="no_color",
+        default=False,
+        help="Disable ANSI colour output (also honours NO_COLOR env var)",
+    )
+    parser.add_argument(
+        "--color",
+        type=str,
+        choices=["auto", "always", "never"],
+        default="auto",
+        metavar="WHEN",
+        help="When to use ANSI colours: auto, always, or never. (default: auto)",
+    )
+    # ── Verbosity / Logging ───────────────────────────────────────────────
+    parser.add_argument(
+        "-v",
+        action="count",
+        dest="verbosity",
+        default=0,
+        help="Increase verbosity (-v for INFO, -vv for DEBUG output)",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_const",
+        dest="verbosity",
+        const=-1,
+        help="Suppress non-error output (sets log level to ERROR)",
     )
     return parser
 
@@ -1352,6 +1636,99 @@ def build_parser() -> argparse.ArgumentParser:
 # =============================================================================
 # HEADLESS EXECUTION
 # =============================================================================
+
+
+def _show_dry_run_plan(
+    engine: Any,
+    preset: Any,
+    addons: list[Any] | None,
+    preset_key: str,
+    database: str,
+    project_name: str,
+    project_path: Path,
+) -> int:
+    """Print the scaffold plan without making any changes.
+
+    Lists the steps that would be executed and the files that would be
+    created.  Called when ``--dry-run`` is passed.
+    """
+    # Standard step descriptions (mirrors ScaffoldEngine.execute logic)
+    steps: list[str] = [
+        "Creating project directory",
+        "Creating .env file",
+        "Creating .gitignore",
+    ]
+
+    preset_name = getattr(preset, "name", preset_key)
+    deps = getattr(preset, "dependencies", [])
+    if deps:
+        steps.append(f"Installing dependencies ({' '.join(deps)})")
+    dev_deps = getattr(preset, "dev_dependencies", [])
+    if dev_deps:
+        steps.append(f"Installing dev dependencies ({' '.join(dev_deps)})")
+
+    steps.extend(
+        [
+            "Initialising git repository",
+            "Initialising uv project",
+            f"Running {preset_name} preset",
+        ]
+    )
+
+    if addons:
+        addon_deps: list[str] = []
+        addon_dev_deps: list[str] = []
+        for a in addons:
+            addon_deps.extend(getattr(a, "dependencies", []))
+            addon_dev_deps.extend(getattr(a, "dev_dependencies", []))
+        if addon_deps:
+            steps.append(f"Installing add-on dependencies ({' '.join(addon_deps)})")
+        if addon_dev_deps:
+            steps.append(
+                f"Installing add-on dev dependencies ({' '.join(addon_dev_deps)})"
+            )
+        steps.append("Applying add-on modules")
+
+    steps.append("Running uv sync")
+
+    # ── Render output ────────────────────────────────────────────────────
+    bullet = icon("bullet")
+
+    console.print()
+    print_rule("DRY RUN — No changes will be made", style=Theme.WARNING)
+    console.print()
+    console.print(f"  [bold {Theme.PRIMARY}]{project_name}[/]")
+    console.print(
+        f"  [dim {Theme.MUTED}]Preset: {preset_key} | Database: {database}[/]"
+    )
+    if addons:
+        console.print(
+            f"  [dim {Theme.MUTED}]Add-ons: {', '.join(a.name for a in addons)}[/]"
+        )
+    console.print()
+
+    console.print(f"  [bold {Theme.SECONDARY}]Steps that would be executed:[/]")
+    for step in steps:
+        console.print(f"    {bullet} [{Theme.SUCCESS}]{step}[/]")
+    console.print()
+
+    # Preview files
+    preview = engine.get_preview_files()
+    if preview:
+        console.print(f"  [bold {Theme.SECONDARY}]Files that would be created:[/]")
+        for path, size in preview:
+            if size:
+                console.print(f"    {bullet} [dim]{path}[/] ({size} bytes)")
+            else:
+                console.print(f"    {bullet} [dim]{path}/[/]")
+        console.print()
+
+    console.print(
+        f"  [italic dim {Theme.MUTED}]Pass --dry-run to preview without making changes.[/]"
+    )
+    console.print()
+
+    return 0
 
 
 async def _headless_execute(args: argparse.Namespace) -> int:
@@ -1456,20 +1833,44 @@ async def _headless_execute(args: argparse.Namespace) -> int:
 
     # 6. Execution
     project_path = args.output_dir / project_name
-    console.print(
-        f"\n[bold {Theme.PRIMARY}]Starting headless scaffold for '{project_name}'...[/]"
-    )
-    console.print(f"  Preset: {preset_key} | Database: {args.database}")
-    if addons:
-        console.print(f"  Add-ons: {', '.join(a.name for a in addons)}")
-    console.print()
 
     try:
         preset_cls = get_preset(preset_key)
         preset_instance = preset_cls()
 
         engine = ScaffoldEngine(project_path, env_config=env_config)
-        success = await engine.execute(preset=preset_instance, addons=addons)
+
+        # ── Dry-run: show planned steps and preview files ────────────────
+        if args.dry_run:
+            return _show_dry_run_plan(
+                engine,
+                preset_instance,
+                addons,
+                preset_key,
+                args.database,
+                project_name,
+                project_path,
+            )
+
+        console.print(
+            f"\n[bold {Theme.PRIMARY}]Starting headless scaffold for '{project_name}'...[/]"
+        )
+        console.print(f"  Preset: {preset_key} | Database: {args.database}")
+        if addons:
+            console.print(f"  Add-ons: {', '.join(a.name for a in addons)}")
+        console.print()
+
+        # Register the engine's rollback manager with the global SIGINT
+        # handler so that Ctrl+C before/after engine execution still
+        # triggers cleanup (the engine installs its own handler during
+        # execution).
+        from ajo.core.signals import register_rollback_handler
+
+        register_rollback_handler(lambda: engine._rollback.execute_all())
+        try:
+            success = await engine.execute(preset=preset_instance, addons=addons)
+        finally:
+            register_rollback_handler(None)
 
         if not success:
             show_error(
@@ -1529,7 +1930,21 @@ def _parse_args() -> argparse.Namespace | int | None:
         - int: Validation error occurred; exit with the returned code.
     """
     parser = build_parser()
-    args = parser.parse_args()
+
+    # Use parse_known_args so we can intercept unknown subcommands for
+    # typo correction before argparse raises SystemExit.
+    args, unknown = parser.parse_known_args()
+
+    # ── Fuzzy typo correction for unknown subcommands ──────────────────
+    if unknown:
+        from ajo.core.typo_correction import check_and_suggest
+
+        if check_and_suggest(unknown[0], parser):
+            # Suggestion printed to stderr — exit with code 2 (usage)
+            return 2
+        # No suggestion found — let argparse show its standard error
+        parser.parse_args()
+        return 2  # never reached (parse_args exits), but satisfies type-checker
 
     # ── Version fast-path ────────────────────────────────────────────────
     # Use raw ``print()`` here — Rich console is NOT loaded at this point
@@ -1538,14 +1953,21 @@ def _parse_args() -> argparse.Namespace | int | None:
         print(f"ajo v{__version__}")
         return None
 
+    # ── Apply colour-preference flags BEFORE lazy imports ──────────────
+    # This ensures the Console is created with the correct settings.
+    _set_color_flags(no_color=args.no_color, color=args.color)
+
+    # ── Configure logging from verbosity flags ──────────────────────────
+    setup_logging(verbosity=args.verbosity)
+
     # ── Ensure lazy (Rich / InquirerPy) imports are loaded ──────────────
     # From this point forward, all module-level names (console, inquirer,
     # Panel, ThemeEngine, etc.) will have their real values.
     # This call is idempotent and costs ~0 after the first invocation.
     _ensure_rich_imported()
 
-    # ── Headless mode validation ──────────────────────────────────────────
-    if args.headless or args.yes:
+    # ── Headless mode validation (only when no subcommand) ────────────────
+    if not args.command and (args.headless or args.yes):
         if not args.name and not args.yes:
             show_error("Missing Project Name", "--name is required in headless mode")
             return 11
@@ -1571,6 +1993,51 @@ async def _async_main() -> int:
         return result  # Validation error
     args = result
 
+    # ── Install global SIGINT / SIGTERM handlers ─────────────────────────
+    # These provide a safety net for all code paths below (scaffold,
+    # interactive prompts, subprocess calls).  The scaffold engine also
+    # installs its own temporary handler during step execution.
+    from ajo.core.signals import install_signal_handlers
+
+    install_signal_handlers()
+
+    # ── Subcommand dispatch (doctor, completion, …) ───────────────────────
+    if args.command is not None:
+        if args.command == "doctor":
+            from ajo.commands.doctor import run as run_doctor
+
+            return run_doctor(args)
+        if args.command == "completion":
+            try:
+                from ajo.commands.completions import run as run_completion
+
+                return run_completion(args)
+            except ImportError:
+                console.print(
+                    "[bold red]Error:[/] Shell completions support is not installed. "
+                    "Run [bold]uv add shtab[/] and try again."
+                )
+                return 1
+        if args.command == "upgrade":
+            from ajo.commands.upgrade import run as run_upgrade
+
+            return run_upgrade(args)
+        if args.command == "changelog":
+            from ajo.commands.changelog import run as run_changelog
+
+            return run_changelog(args)
+        if args.command == "scan":
+            from ajo.commands.scan import run as run_scan
+
+            return run_scan(args)
+        if args.command == "report":
+            from ajo.commands.report import run as run_report
+
+            return run_report(args)
+        # Unknown subcommand — should not happen with argparse, but safeguard
+        console.print(f"[bold red]Error:[/] Unknown command: {args.command}")
+        return 2
+
     # ── Theme Engine initialisation ──────────────────────────────────────
     engine = ThemeEngine.get_instance()
     engine.set_theme(ThemeVariant.from_string(args.theme))
@@ -1583,6 +2050,11 @@ async def _async_main() -> int:
     from ajo.core.config import ConfigManager
 
     config = ConfigManager()
+
+    # ── Background version check (non-blocking, daemon thread) ──────────
+    from ajo.core.updater import check_in_background
+
+    check_in_background(config=config._data if hasattr(config, "_data") else None)
 
     # ── First-time Nerd Font prompt (interactive only) ───────────────────
     if config.is_first_run() and not (args.headless or args.yes):
@@ -1600,6 +2072,70 @@ async def _async_main() -> int:
         return await _headless_execute(args)
 
     # ── Interactive TUI Mode ─────────────────────────────────────────────
+    # Show the main menu BEFORE any Django detection so the user can
+    # choose any action straight away.
+    from ajo.commands.menu import show_main_menu as _show_main_menu
+
+    _menu_action = await _show_main_menu(inquirer_style=INQUIRER_STYLE)
+
+    if _menu_action is None:
+        return 130  # user pressed Ctrl+C / Esc
+    if _menu_action == "exit":
+        return 0
+
+    # ── Route non-scaffold actions to their command implementations ────
+    if _menu_action == "doctor":
+        import argparse
+
+        from ajo.commands.doctor import run as _run_doctor
+
+        return _run_doctor(argparse.Namespace(json=False))
+
+    if _menu_action == "scan":
+        import argparse
+
+        from ajo.commands.scan import run as _run_scan
+
+        return _run_scan(argparse.Namespace(json=False))
+
+    if _menu_action == "report":
+        import argparse
+
+        from ajo.commands.report import run as _run_report
+
+        return _run_report(
+            argparse.Namespace(output=None, clipboard=False, stdout=False)
+        )
+
+    if _menu_action == "upgrade":
+        import argparse
+
+        from ajo.commands.upgrade import run as _run_upgrade
+
+        return _run_upgrade(argparse.Namespace(check=False, yes=False))
+
+    if _menu_action == "changelog":
+        import argparse
+
+        from ajo.commands.changelog import run as _run_changelog
+
+        return _run_changelog(argparse.Namespace(latest=False))
+
+    if _menu_action == "completion":
+        import argparse
+
+        try:
+            from ajo.commands.completions import run as _run_completion
+
+            return _run_completion(argparse.Namespace(shell="bash"))
+        except ImportError:
+            console.print(
+                "[bold red]Error:[/] Shell completions support is not installed. "
+                "Run [bold]uv add shtab[/] and try again."
+            )
+            return 1
+
+    # ── "new_project" — fall through to the existing project flow ──────
     try:
         # ── Detect Django project once ──────────────────────────────────
         detector = DjangoProjectDetector()
@@ -1788,6 +2324,7 @@ async def _async_main() -> int:
             BarColumn(bar_width=40, style=Theme.PRIMARY, complete_style=Theme.SUCCESS),
             TimeElapsedColumn(),
             console=console,
+            disable=should_disable_progress(),
             transient=False,
         ) as progress:
             task = progress.add_task("Creating Django project...", total=None)
@@ -1813,6 +2350,7 @@ async def _async_main() -> int:
                 SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
                 TextColumn("[progress.description]{task.description}"),
                 console=console,
+                disable=should_disable_progress(),
                 transient=False,
             ) as _addon_progress:
                 _addon_task = _addon_progress.add_task(
