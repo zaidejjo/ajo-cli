@@ -1278,6 +1278,38 @@ def show_completion(
 # =============================================================================
 
 
+def _make_usage_examples() -> str:
+    """Build a rich usage examples section for the main parser epilog."""
+    return (
+        "\n"
+        "Examples:\n"
+        "  Interactive mode (no arguments required):\n"
+        "    ajo\n"
+        "\n"
+        "  Quick-start a new project with defaults:\n"
+        "    ajo --yes --name myproject\n"
+        "\n"
+        "  Full headless scaffold with preset and add-ons:\n"
+        "    ajo --name myblog --preset rest-api --database postgresql \\\n"
+        "      --addons auth cache security --yes\n"
+        "\n"
+        "  Preview planned files without writing:\n"
+        "    ajo --name myproject --dry-run\n"
+        "\n"
+        "  Evaluate existing Django project health:\n"
+        "    ajo scan\n"
+        "\n"
+        "  Generate a shareable diagnostic report:\n"
+        "    ajo report --output report.md\n"
+        "\n"
+        "  Check for updates without upgrading:\n"
+        "    ajo upgrade --check\n"
+        "\n"
+        "  See version information (fast, no imports):\n"
+        "    ajo --version\n"
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser.
 
@@ -1290,20 +1322,29 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ajo",
         description="Professional Django scaffolder with Cyberpunk TUI",
-        epilog="Run without arguments for interactive mode.",
+        epilog=_make_usage_examples(),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     # ── Subcommands (doctor, completion, …) ──────────────────────────────
     # When a subcommand is given (e.g. ``ajo doctor``), ``args.command``
     # is set to the subcommand name.  When omitted, ``args.command`` is
     # ``None`` and the existing interactive / headless behaviour applies.
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest="command", title="Commands")
 
     # ``ajo doctor`` — system health check
     doctor_parser = subparsers.add_parser(
         "doctor",
         help="System health check",
-        description="Check all system prerequisites, configuration, and terminal capabilities.",
+        description=(
+            "Check all system prerequisites, configuration, and terminal"
+            " capabilities.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo doctor\n"
+            "  ajo self-check\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     doctor_parser.set_defaults(command="doctor")
 
@@ -1311,8 +1352,15 @@ def build_parser() -> argparse.ArgumentParser:
     self_check_parser = subparsers.add_parser(
         "self-check",
         help="System health check (alias for doctor)",
-        description="Alias for ``ajo doctor`` — check system prerequisites, "
-        "configuration, and terminal capabilities.",
+        description=(
+            "Alias for ``ajo doctor`` — check system prerequisites,"
+            " configuration, and terminal capabilities.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo self-check\n"
+            "  ajo doctor\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     self_check_parser.set_defaults(command="doctor")
 
@@ -1320,7 +1368,15 @@ def build_parser() -> argparse.ArgumentParser:
     completion_parser = subparsers.add_parser(
         "completion",
         help="Generate shell completions",
-        description="Generate shell completion scripts for bash, zsh, or tcsh.",
+        description=(
+            "Generate shell completion scripts for bash, zsh, or tcsh.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo completion bash  > /etc/bash_completion.d/ajo\n"
+            "  ajo completion zsh   > /usr/local/share/zsh/site-functions/_ajo\n"
+            "  ajo completion tcsh  > ~/.tcshrc\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     completion_parser.add_argument(
         "shell",
@@ -1334,8 +1390,17 @@ def build_parser() -> argparse.ArgumentParser:
     upgrade_parser = subparsers.add_parser(
         "upgrade",
         help="Update ajo-cli to the latest version",
-        description="Check PyPI for a newer release and upgrade using the "
-        "appropriate package manager for your environment (uv, pipx, or pip).",
+        description=(
+            "Check PyPI for a newer release and upgrade using the"
+            " appropriate package manager for your environment (uv, pipx,"
+            " or pip).\n"
+            "\n"
+            "Examples:\n"
+            "  ajo upgrade             Upgrade to the latest version\n"
+            "  ajo upgrade --check     Only check for available updates\n"
+            "  ajo upgrade --yes       Skip confirmation prompt\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     upgrade_parser.add_argument(
         "--check",
@@ -1354,8 +1419,15 @@ def build_parser() -> argparse.ArgumentParser:
     changelog_parser = subparsers.add_parser(
         "changelog",
         help="Display the project changelog",
-        description="Show the local CHANGELOG.md or fetch the latest release "
-        "notes from GitHub.",
+        description=(
+            "Show the local CHANGELOG.md or fetch the latest release"
+            " notes from GitHub.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo changelog          Full changelog\n"
+            "  ajo changelog --latest  Only the most recent release\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     changelog_parser.add_argument(
         "--latest",
@@ -1368,9 +1440,17 @@ def build_parser() -> argparse.ArgumentParser:
     scan_parser = subparsers.add_parser(
         "scan",
         help="Display a project health card",
-        description="Inspect the current Django project and display a "
-        "formatted summary including Django version, model count, "
-        "installed apps, middleware, URL patterns, and environment context.",
+        description=(
+            "Inspect the current Django project and display a"
+            " formatted summary including Django version, model count,"
+            " installed apps, middleware, URL patterns, and environment"
+            " context.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo scan                  Pretty-printed health card\n"
+            "  ajo scan --json           Machine-readable JSON output\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     scan_parser.add_argument(
         "--json",
@@ -1383,9 +1463,18 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser = subparsers.add_parser(
         "report",
         help="Generate a comprehensive diagnostic report",
-        description="Generate a shareable diagnostic report containing OS, "
-        "Python, ajo, terminal, config (secrets redacted), Django project "
-        "info, and update status.",
+        description=(
+            "Generate a shareable diagnostic report containing OS,"
+            " Python, ajo, terminal, config (secrets redacted), Django"
+            " project info, and update status.\n"
+            "\n"
+            "Examples:\n"
+            "  ajo report                     Print to stdout\n"
+            "  ajo report --output report.md  Save as Markdown file\n"
+            "  ajo report --output report.json  Save as JSON\n"
+            "  ajo report --clipboard         Copy to system clipboard\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     report_output_group = report_parser.add_mutually_exclusive_group()
     report_output_group.add_argument(
@@ -1410,18 +1499,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--version",
         action="store_true",
-        help="Show version and exit",
+        help="Show ajo version and exit immediately (fast, no imports)",
     )
     parser.add_argument(
         "--headless",
         action="store_true",
-        help="Non-interactive mode (requires --name)",
+        dest="headless",
+        help="Non-interactive mode (requires --name). Useful for CI/CD.",
     )
     parser.add_argument(
         "-n",
         "--name",
         type=str,
-        help="Project name (required with --headless)",
+        metavar="NAME",
+        help="Project name (required with --headless). Use snake_case or kebab-case.",
     )
     parser.add_argument(
         "-p",
@@ -1439,7 +1530,10 @@ def build_parser() -> argparse.ArgumentParser:
             "fullstack",
         ],
         default="monolith",
-        help="Architecture preset (default: monolith)",
+        help="Architecture preset: standard Django (monolith), "
+        "DRF (rest-api), django-ninja (ninja-api), GraphQL (graphql-api), "
+        "or Docker-based (docker). Aliases: rest, ninja, graphql. "
+        "(default: monolith)",
     )
     parser.add_argument(
         "-d",
@@ -1447,56 +1541,62 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         choices=["sqlite", "postgresql", "mysql"],
         default="sqlite",
-        help="Database type (default: sqlite)",
+        help="Database backend: sqlite (dev), postgresql, or mysql. (default: sqlite)",
     )
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Accept all defaults (implies --headless)",
+        help="Accept all defaults non-interactively (implies --headless)",
     )
     parser.add_argument(
         "--no-github",
         action="store_true",
-        help="Skip GitHub setup",
+        help="Skip GitHub repository creation and push",
     )
     parser.add_argument(
         "--no-cicd",
         action="store_true",
-        help="Skip CI/CD setup",
+        help="Skip GitHub Actions CI/CD workflow generation",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path.cwd(),
-        help="Parent directory for the project (default: current dir)",
+        metavar="DIR",
+        help="Parent directory for the scaffolded project "
+        "(default: current working directory)",
     )
     parser.add_argument(
         "--theme",
         type=str,
         choices=["cyberpunk", "dracula", "monochromatic", "mono"],
         default="cyberpunk",
-        help="Visual theme (default: cyberpunk)",
+        help="Visual TUI theme. Choices: cyberpunk, dracula, "
+        "monochromatic/mono. (default: cyberpunk)",
     )
     parser.add_argument(
         "--addons",
         type=str,
         nargs="*",
         default=None,
-        help="Add-on modules to include (e.g. auth cache security testing)",
+        metavar="ADDON",
+        help="Add-on modules to include. Space-separated list. "
+        "Available: auth, cache, security, testing. "
+        "(e.g. --addons auth cache)",
     )
     parser.add_argument(
         "--no-addons",
         action="store_true",
         dest="no_addons",
-        help="Skip all add-on modules",
+        help="Skip all add-on modules explicitly",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         dest="dry_run",
         default=False,
-        help="Preview planned files and steps without making any changes",
+        help="Preview files and execution plan without writing anything",
     )
     # ── Colour / ANSI control ────────────────────────────────────────────
     parser.add_argument(
@@ -1511,7 +1611,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         choices=["auto", "always", "never"],
         default="auto",
-        help="When to use ANSI colours (default: auto)",
+        metavar="WHEN",
+        help="When to use ANSI colours: auto, always, or never. (default: auto)",
     )
     # ── Verbosity / Logging ───────────────────────────────────────────────
     parser.add_argument(
@@ -1519,7 +1620,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="count",
         dest="verbosity",
         default=0,
-        help="Increase verbosity (-v for INFO, -vv for DEBUG)",
+        help="Increase verbosity (-v for INFO, -vv for DEBUG output)",
     )
     parser.add_argument(
         "-q",
