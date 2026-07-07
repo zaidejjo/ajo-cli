@@ -1341,6 +1341,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     upgrade_parser.set_defaults(command="upgrade")
 
+    # ``ajo changelog [--latest]`` — display changelog
+    changelog_parser = subparsers.add_parser(
+        "changelog",
+        help="Display the project changelog",
+        description="Show the local CHANGELOG.md or fetch the latest release "
+        "notes from GitHub.",
+    )
+    changelog_parser.add_argument(
+        "--latest",
+        action="store_true",
+        help="Show only the most recent entry / release",
+    )
+    changelog_parser.set_defaults(command="changelog")
+
     parser.add_argument(
         "--version",
         action="store_true",
@@ -1855,6 +1869,10 @@ async def _async_main() -> int:
             from ajo.commands.upgrade import run as run_upgrade
 
             return run_upgrade(args)
+        if args.command == "changelog":
+            from ajo.commands.changelog import run as run_changelog
+
+            return run_changelog(args)
         # Unknown subcommand — should not happen with argparse, but safeguard
         console.print(f"[bold red]Error:[/] Unknown command: {args.command}")
         return 2
