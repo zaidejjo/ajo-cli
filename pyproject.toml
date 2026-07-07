@@ -33,6 +33,7 @@ dependencies = [
     "InquirerPy>=0.3.4",
     "python-dotenv>=1.0.0",
     "nest-asyncio>=1.6.0",
+    "shtab>=1.8",
 ]
 
 [project.scripts]
@@ -43,6 +44,11 @@ Homepage = "https://github.com/zaidejjo/ajo-cli"
 Repository = "https://github.com/zaidejjo/ajo-cli"
 Documentation = "https://github.com/zaidejjo/ajo-cli#readme"
 Issues = "https://github.com/zaidejjo/ajo-cli/issues"
+
+[project.optional-dependencies]
+completions = [
+    "shtab>=1.8.1",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

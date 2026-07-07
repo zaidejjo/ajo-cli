@@ -1307,13 +1307,13 @@ def build_parser() -> argparse.ArgumentParser:
     completion_parser = subparsers.add_parser(
         "completion",
         help="Generate shell completions",
-        description="Generate shell completion scripts for bash, zsh, or fish.",
+        description="Generate shell completion scripts for bash, zsh, or tcsh.",
     )
     completion_parser.add_argument(
         "shell",
         type=str,
-        choices=["bash", "zsh", "fish"],
-        help="Target shell",
+        choices=["bash", "zsh", "tcsh"],
+        help="Target shell (supported: bash, zsh, tcsh)",
     )
     completion_parser.set_defaults(command="completion")
 
