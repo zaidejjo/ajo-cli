@@ -21,6 +21,13 @@ from typing import Any, Dict, List, Optional, Tuple
 # Local imports (stdlib-only or very lightweight)
 from ajo import __version__
 from ajo.core.app import async_entry
+from ajo.core.color_control import (
+    UNSET,
+    _Unset,
+    configure_console,
+    resolve_color_preference,
+)
+from ajo.core.logging_config import setup_logging
 from ajo.core.constants import NF, Theme, ThemeVariant, icon, qmark
 from ajo.core.exceptions import AjoError, PresetError
 
@@ -38,6 +45,23 @@ from ajo.core.lazy_imports import LazyImportTracker, lazy_attr
 # actually accessed.
 
 _all_loaded: bool = False
+_no_color_flag: bool | _Unset = UNSET
+_color_flag: str | _Unset = UNSET
+
+
+def _set_color_flags(
+    *, no_color: bool | _Unset = UNSET, color: str | _Unset = UNSET
+) -> None:
+    """Store colour-preference flags so ``_ensure_rich_imported`` can read them.
+
+    Must be called **before** the first access to ``console`` (i.e. before
+    :func:`_ensure_rich_imported` triggers).
+    """
+    global _no_color_flag, _color_flag
+    if no_color is not UNSET:
+        _no_color_flag = no_color
+    if color is not UNSET:
+        _color_flag = color
 
 
 def _ensure_rich_imported() -> None:
@@ -68,6 +92,7 @@ def _ensure_rich_imported() -> None:
 
     # Rich
     RichConsole = lazy_attr("rich.console", "Console")
+    Console = RichConsole
     Live = lazy_attr("rich.live", "Live")
     Panel = lazy_attr("rich.panel", "Panel")
     Spinner = lazy_attr("rich.spinner", "Spinner")
@@ -177,8 +202,9 @@ def _ensure_rich_imported() -> None:
     global AppNameValidator
     AppNameValidator = _AppNameValidator
 
-    # Global console
-    console = RichConsole()
+    # Global console (respects NO_COLOR / FORCE_COLOR / --no-color)
+    global _no_color_flag, _color_flag
+    console = configure_console(no_color=_no_color_flag, color=_color_flag)
     _all_loaded = True
 
 
@@ -1346,6 +1372,37 @@ def build_parser() -> argparse.ArgumentParser:
         dest="no_addons",
         help="Skip all add-on modules",
     )
+    # ── Colour / ANSI control ────────────────────────────────────────────
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        dest="no_color",
+        default=False,
+        help="Disable ANSI colour output (also honours NO_COLOR env var)",
+    )
+    parser.add_argument(
+        "--color",
+        type=str,
+        choices=["auto", "always", "never"],
+        default="auto",
+        help="When to use ANSI colours (default: auto)",
+    )
+    # ── Verbosity / Logging ───────────────────────────────────────────────
+    parser.add_argument(
+        "-v",
+        action="count",
+        dest="verbosity",
+        default=0,
+        help="Increase verbosity (-v for INFO, -vv for DEBUG)",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_const",
+        dest="verbosity",
+        const=-1,
+        help="Suppress non-error output (sets log level to ERROR)",
+    )
     return parser
 
 
@@ -1537,6 +1594,13 @@ def _parse_args() -> argparse.Namespace | int | None:
     if args.version:
         print(f"ajo v{__version__}")
         return None
+
+    # ── Apply colour-preference flags BEFORE lazy imports ──────────────
+    # This ensures the Console is created with the correct settings.
+    _set_color_flags(no_color=args.no_color, color=args.color)
+
+    # ── Configure logging from verbosity flags ──────────────────────────
+    setup_logging(verbosity=args.verbosity)
 
     # ── Ensure lazy (Rich / InquirerPy) imports are loaded ──────────────
     # From this point forward, all module-level names (console, inquirer,
