@@ -109,7 +109,7 @@ async def show_main_menu(
 
     from InquirerPy import inquirer
 
-    from ajo.core.console import console
+    from ajo.cli import console  # noqa: PLC0415 — lazy import
     from ajo.core.constants import qmark
 
     # ── Welcome banner ────────────────────────────────────────────────
