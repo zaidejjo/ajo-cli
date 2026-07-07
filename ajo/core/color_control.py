@@ -151,6 +151,30 @@ def supports_color() -> bool:
     return resolve_color_preference()
 
 
+def should_disable_progress() -> bool:
+    """Determine whether progress bars / spinners should be suppressed.
+
+    Returns ``True`` when:
+    - The ``CI`` environment variable is set to ``"true"`` / ``"1"`` / ``"yes"``.
+    - Standard output is not a TTY (piped to a file or another process).
+
+    Returns ``False`` otherwise — Rich's Console-level colour handling
+    (``no_color``, ``color_system``) is sufficient for ``--no-color`` /
+    ``NO_COLOR`` cases where the user still expects to see progress output
+    (just without ANSI codes).
+
+    This is intended for use with Rich's ``Progress(disable=...)`` parameter.
+    """
+    ci = os.environ.get(CI_ENV, "").lower()
+    if ci in ("true", "1", "yes"):
+        return True
+
+    if not sys.stdout.isatty():
+        return True
+
+    return False
+
+
 def strip_ansi(text: str) -> str:
     """Strip ANSI escape sequences from *text*.
 

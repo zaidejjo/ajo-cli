@@ -26,6 +26,7 @@ from ajo.core.color_control import (
     _Unset,
     configure_console,
     resolve_color_preference,
+    should_disable_progress,
 )
 from ajo.core.logging_config import setup_logging
 from ajo.core.constants import NF, Theme, ThemeVariant, icon, qmark
@@ -674,6 +675,7 @@ def setup_github(project_path: Path, project_name: str) -> bool:
         SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
         TextColumn("[progress.description]{task.description}"),
         console=console,
+        disable=should_disable_progress(),
         transient=False,
     ) as progress:
         task = progress.add_task("Creating repository...", total=None)
@@ -1116,6 +1118,7 @@ async def _run_subprocess(
         SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
         TextColumn(f"[progress.description]{{task.description}}"),
         console=console,
+        disable=should_disable_progress(),
         transient=True,
     ) as progress:
         task = progress.add_task(
@@ -1201,6 +1204,7 @@ def create_apps_loop(scaffolder):
             SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
             TextColumn("[progress.description]{task.description}"),
             console=console,
+            disable=should_disable_progress(),
             transient=False,
         ) as progress:
             task = progress.add_task(f"Creating app '{app_name}'...", total=None)
@@ -1902,6 +1906,7 @@ async def _async_main() -> int:
             BarColumn(bar_width=40, style=Theme.PRIMARY, complete_style=Theme.SUCCESS),
             TimeElapsedColumn(),
             console=console,
+            disable=should_disable_progress(),
             transient=False,
         ) as progress:
             task = progress.add_task("Creating Django project...", total=None)
@@ -1927,6 +1932,7 @@ async def _async_main() -> int:
                 SpinnerColumn("dots12", style=f"bold {Theme.PRIMARY}"),
                 TextColumn("[progress.description]{task.description}"),
                 console=console,
+                disable=should_disable_progress(),
                 transient=False,
             ) as _addon_progress:
                 _addon_task = _addon_progress.add_task(

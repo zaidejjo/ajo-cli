@@ -30,6 +30,7 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
+from ajo.core.color_control import configure_console, should_disable_progress
 from ajo.ui.theme import ThemeEngine
 
 
@@ -69,9 +70,12 @@ class AsyncProgressManager:
         self,
         console: Console | None = None,
         engine: ThemeEngine | None = None,
+        *,
+        disable: bool | None = None,
     ) -> None:
         self._engine = engine or ThemeEngine.get_instance()
-        self._console = console or Console()
+        self._disable = disable if disable is not None else should_disable_progress()
+        self._console = console or configure_console()
         self._progress: Progress | None = None
         self._refresh_task: asyncio.Task[None] | None = None
 
@@ -99,6 +103,7 @@ class AsyncProgressManager:
             TimeRemainingColumn(),
             console=self._console,
             expand=True,
+            disable=self._disable,
         )
 
         self._progress.start()

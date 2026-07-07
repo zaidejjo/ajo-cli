@@ -12,6 +12,7 @@ from ajo.core.color_control import (
     UNSET,
     configure_console,
     resolve_color_preference,
+    should_disable_progress,
     strip_ansi,
     supports_color,
 )
@@ -157,3 +158,46 @@ class TestUnset:
         from ajo.core.color_control import _Unset
 
         assert UNSET is _Unset()
+
+
+class TestShouldDisableProgress:
+    """Tests for the progress-disabling predicate."""
+
+    def test_default_is_tty(self) -> None:
+        """Default (TTY, no CI) → progress enabled."""
+        with mock.patch.object(sys.stdout, "isatty", return_value=True):
+            assert should_disable_progress() is False
+
+    def test_disabled_when_non_tty(self) -> None:
+        """Non-TTY → progress disabled."""
+        with mock.patch.object(sys.stdout, "isatty", return_value=False):
+            assert should_disable_progress() is True
+
+    @pytest.mark.parametrize(
+        ("ci_value", "expected"),
+        [
+            ("true", True),
+            ("1", True),
+            ("yes", True),
+            ("True", True),
+            ("false", False),
+            ("0", False),
+            ("", False),
+        ],
+    )
+    def test_ci_env(self, ci_value: str, expected: bool) -> None:
+        """CI env var disables progress."""
+        with mock.patch.dict(os.environ, {"CI": ci_value}, clear=True):
+            with mock.patch.object(sys.stdout, "isatty", return_value=True):
+                assert should_disable_progress() is expected
+
+    def test_ci_wins_over_tty(self) -> None:
+        """CI=true disables progress even when TTY."""
+        with mock.patch.dict(os.environ, {"CI": "true"}, clear=True):
+            with mock.patch.object(sys.stdout, "isatty", return_value=True):
+                assert should_disable_progress() is True
+
+    def test_non_tty_wins_without_ci(self) -> None:
+        """Non-TTY disables progress even without CI."""
+        with mock.patch.object(sys.stdout, "isatty", return_value=False):
+            assert should_disable_progress() is True
