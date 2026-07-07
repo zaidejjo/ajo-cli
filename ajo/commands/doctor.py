@@ -17,45 +17,31 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from ajo.core.environment import (
+    detect_environment_name,
+    environment_display as env_display,
+)
 
-# ── Environment detection ─────────────────────────────────────────────────
+
+# ── Environment detection (delegates to ajo.core.environment) ──────────────
 
 
 def _detect_environment() -> str:
-    """Return a human-readable description of the current Python environment.
+    """Return the short name of the current Python environment.
 
+    Delegates to :func:`ajo.core.environment.detect_environment_name`.
     Returns one of: ``"virtualenv"``, ``"uv"``, ``"pipx"``, ``"conda"``,
     ``"global"``.
     """
-    if os.environ.get("PIPX_ACTIVE") or str(Path(sys.executable)).startswith(
-        str(Path.home() / ".local" / "pipx")
-    ):
-        return "pipx"
-    if os.environ.get("UV_ACTIVE"):
-        return "uv"
-    if os.environ.get("CONDA_PREFIX"):
-        return "conda"
-    if os.environ.get("VIRTUAL_ENV") or sys.prefix != sys.base_prefix:
-        return "virtualenv"
-    return "global"
+    return detect_environment_name()
 
 
 def _environment_display() -> str:
     """Return a display string for the environment (e.g. ``virtualenv (.venv)``).
 
-    Includes the environment path suffix when available.
+    Delegates to :func:`ajo.core.environment.environment_display`.
     """
-    env_type = _detect_environment()
-    venv_path = os.environ.get("VIRTUAL_ENV") or ""
-    conda_prefix = os.environ.get("CONDA_PREFIX") or ""
-
-    if env_type == "virtualenv" and venv_path:
-        suffix = Path(venv_path).name
-        return f"virtualenv ({suffix})"
-    if env_type == "conda" and conda_prefix:
-        suffix = Path(conda_prefix).name
-        return f"conda ({suffix})"
-    return env_type
+    return env_display()
 
 
 # ── Individual checks ─────────────────────────────────────────────────────
