@@ -1,0 +1,112 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Publish — Build & upload to PyPI on a new tag
+# ──────────────────────────────────────────────────────────────────────────────
+# Triggered when a tag matching ``v*.*.*`` is pushed (e.g., ``v3.3.0``).
+#
+# 1. Build source distribution + wheel via ``uv build``.
+# 2. Generate bash / zsh / tcsh completions via ``shtab``.
+# 3. Upload completions as a workflow artifact.
+# 4. Publish to PyPI using trusted publishing (OIDC) if the repository is
+#    configured for it; falls back to ``PYPI_TOKEN`` if OIDC is unavailable.
+#
+# Prerequisites:
+#   - For OIDC:  Enable "Allow GitHub Actions to create and approve
+#                release requests" in PyPI project settings.
+#   - For token:  Add ``PYPI_TOKEN`` to GitHub repository secrets.
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  # ═════════════════════════════════════════════════════════════════════════
+  # Build  —  source distribution + wheel + shell completions
+  # ═════════════════════════════════════════════════════════════════════════
+  build:
+    name: "Build distribution"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project with completions extra
+        run: uv sync --dev
+
+      - name: Build source distribution and wheel
+        run: uv build
+
+      - name: Generate bash completions
+        run: |
+          mkdir -p completions
+          uv run python -m shtab --shell=bash ajo.cli.build_parser > completions/ajo.bash 2>&1 || echo "shtab bash failed" >&2
+
+      - name: Generate zsh completions
+        run: >
+          uv run python -m shtab --shell=zsh ajo.cli.build_parser > completions/_ajo 2>&1
+          || echo "shtab zsh failed" >&2
+
+      - name: Generate tcsh completions
+        run: >
+          uv run python -m shtab --shell=tcsh ajo.cli.build_parser > completions/ajo.csh 2>&1
+          || echo "shtab tcsh failed" >&2
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 5
+
+      - name: Upload completion artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: shell-completions
+          path: completions/
+          retention-days: 5
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # Publish PyPI  —  push to PyPI using trusted publishing
+  # ═════════════════════════════════════════════════════════════════════════
+  publish:
+    name: "Publish to PyPI"
+    runs-on: ubuntu-latest
+    needs: [build]
+    # Grant OIDC token for trusted publishing
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Fall back to PYPI_TOKEN secret when OIDC is not configured
+          password: ${{ secrets.PYPI_TOKEN }}
+          # Only upload from the dist/ directory
+          packages-dir: dist/
+          # Skip existing packages if re-running
+          skip-existing: true
+          verbose: true

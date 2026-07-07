@@ -49,7 +49,7 @@ async def _run_command(
     command: Sequence[str],
     *,
     cwd: Path | None = None,
-    timeout: int | None = None,
+    timeout: int | None = 30,
     description: str = "",
 ) -> str:
     """Execute an external process asynchronously and return its stdout.
@@ -63,9 +63,9 @@ async def _run_command(
         command: The command and its arguments as a sequence of strings.
         cwd: Working directory for the process (``None`` = inherit from
             the parent process).
-        timeout: Optional timeout in seconds.  If the process does not
-            complete within this window a ``CommandExecutionError`` is
-            raised.
+        timeout: Timeout in seconds (default ``30``).  If the process does
+            not complete within this window a ``CommandExecutionError`` is
+            raised.  Pass ``None`` to disable the timeout.
         description: Human-readable label for error messages (e.g.
             ``"uv add django"``).
 
@@ -135,7 +135,7 @@ async def _run_command_streaming(
     command: Sequence[str],
     *,
     cwd: Path | None = None,
-    timeout: int | None = None,
+    timeout: int | None = 30,
     description: str = "",
     progress_callback: Callable[[int, str], None] | None = None,
     total_lines: int = 100,
@@ -149,7 +149,8 @@ async def _run_command_streaming(
     Args:
         command: The command and its arguments as a sequence of strings.
         cwd: Working directory for the process.
-        timeout: Optional timeout in seconds.
+        timeout: Timeout in seconds (default ``30``).  Pass ``None`` to
+            disable the timeout.
         description: Human-readable label for error messages.
         progress_callback: ``(line_number, line_text)`` called for each
             stdout line.

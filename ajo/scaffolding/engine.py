@@ -24,6 +24,7 @@ from types import FrameType
 from typing import Any, Callable
 
 from ajo.core.exceptions import PresetError, RollbackError
+from ajo.plugins.hooks import PluginManager
 from ajo.presets.addons import AbstractAddon
 from ajo.ui.progress import AsyncProgressManager, run_command_streaming
 
@@ -117,6 +118,7 @@ class ScaffoldEngine:
         project_path: Path,
         *,
         env_config: dict[str, Any] | None = None,
+        plugin_manager: PluginManager | None = None,
     ) -> None:
         self.project_path = project_path.resolve()
         self.env_config = env_config or {}
@@ -124,6 +126,7 @@ class ScaffoldEngine:
         self._interrupted = False
         self._preset: Any | None = None
         self._addons: list[AbstractAddon] | None = None
+        self._plugin_manager: PluginManager | None = plugin_manager
 
         # Populate defaults if not provided
         self.env_config.setdefault("project_name", project_path.name)
@@ -136,6 +139,9 @@ class ScaffoldEngine:
         self,
         preset: Any | None = None,
         addons: list[AbstractAddon] | None = None,
+        *,
+        dry_run: bool = False,
+        parallel_addons: bool = False,
     ) -> bool:
         """Run the full scaffold pipeline atomically.
 
@@ -156,12 +162,23 @@ class ScaffoldEngine:
 
         If any step fails, all completed steps are rolled back.
 
+        When *dry_run* is ``True``, no filesystem changes are made; each step
+        is logged at INFO level and the method returns ``True`` immediately.
+
+        When *parallel_addons* is ``True``, add-on ``apply()`` calls run
+        concurrently via :class:`asyncio.TaskGroup`.  Use this only when
+        add-ons are known to write to independent files to avoid races on
+        shared files (``settings.py``, ``urls.py``, ``.env``).
+
         Args:
             preset: An optional :class:`~ajo.presets.base.AbstractPreset`
                 instance whose ``scaffold()``, ``dependencies``, and
                 ``dev_dependencies`` will be used.
             addons: An optional list of :class:`~ajo.presets.addons.AbstractAddon`
                 instances to layer on top of the preset.
+            dry_run: If ``True``, log planned steps but do not execute them.
+            parallel_addons: If ``True``, run add-on ``apply()`` calls
+                concurrently (default ``False``).
 
         Returns:
             ``True`` if the scaffold completed successfully, ``False``
@@ -209,6 +226,14 @@ class ScaffoldEngine:
                     )
                 )
 
+        if self._plugin_manager is not None:
+            steps.append(
+                (
+                    "Running pre-scaffold hooks",
+                    self._step_pre_hooks,
+                )
+            )
+
         if addons:
             self._addons = addons  # store for preview / rollback
             addon_deps: list[str] = []
@@ -232,14 +257,36 @@ class ScaffoldEngine:
                     )
                 )
 
+            if parallel_addons:
+                steps.append(
+                    (
+                        "Applying add-on modules (parallel)",
+                        lambda: self._step_addon_parallel(addons),
+                    )
+                )
+            else:
+                steps.append(
+                    (
+                        "Applying add-on modules",
+                        lambda: self._step_addon(addons),
+                    )
+                )
+
+        if self._plugin_manager is not None:
             steps.append(
                 (
-                    "Applying add-on modules",
-                    lambda: self._step_addon(addons),
+                    "Running post-scaffold hooks",
+                    self._step_post_hooks,
                 )
             )
 
         steps.append(("Running uv sync", self._step_uv_sync))
+
+        # ── Dry-run: log steps and return without making changes ──────
+        if dry_run:
+            for description, _ in steps:
+                logger.info("[DRY RUN] %s", description)
+            return True
 
         # ── Install SIGINT handler ───────────────────────────────────
         original_handler: Any = None
@@ -516,6 +563,86 @@ class ScaffoldEngine:
                     self._safe_unlink(child)
 
         self._rollback.push("undo add-on modules", _undo_addon)
+
+    async def _step_addon_parallel(self, addons: list[AbstractAddon]) -> None:
+        """Run each add-on's ``apply()`` coroutine **concurrently**.
+
+        Uses :class:`asyncio.TaskGroup` so that add-ons that write to
+        independent files benefit from parallelism.  All errors are
+        aggregated — a failure in one add-on does not prevent others
+        from completing.
+
+        .. caution::
+           If add-ons modify the **same** file (e.g. ``settings.py``),
+           the last writer wins.  Only enable parallel execution when
+           add-ons are known to target distinct files.
+        """
+        project_name: str = self.env_config.get("project_name", self.project_path.name)
+        errors: list[tuple[str, Exception]] = []
+        lock = asyncio.Lock()
+
+        async def _apply_one(addon: AbstractAddon) -> None:
+            try:
+                await addon.apply(self.project_path, project_name, self.env_config)
+            except Exception as exc:
+                async with lock:
+                    errors.append((addon.name, exc))
+
+        async with asyncio.TaskGroup() as tg:
+            for addon in addons:
+                tg.create_task(_apply_one(addon))
+
+        if errors:
+            raise PresetError(
+                "Add-on(s) failed in parallel execution: "
+                + "; ".join(f"'{name}': {exc}" for name, exc in errors)
+            )
+
+        # Register rollback (same as sequential)
+        def _undo_addon_parallel() -> None:
+            for child in self.project_path.iterdir():
+                if child.name in (
+                    ".env",
+                    ".gitignore",
+                    ".git",
+                    "pyproject.toml",
+                    "uv.lock",
+                ):
+                    continue
+                if child.is_dir():
+                    shutil.rmtree(child, ignore_errors=True)
+                else:
+                    self._safe_unlink(child)
+
+        self._rollback.push("undo add-on modules (parallel)", _undo_addon_parallel)
+
+    # ── Plugin hook steps ────────────────────────────────────────────────
+
+    async def _step_pre_hooks(self) -> None:
+        """Execute all loaded ``pre_scaffold`` plugin hooks."""
+        if self._plugin_manager is None:
+            return
+        errors = await self._plugin_manager.execute_pre_scaffold(
+            self.project_path,
+            self.env_config,
+        )
+        if errors:
+            raise PresetError(
+                f"Pre-scaffold hook(s) failed: {'; '.join(str(e) for e in errors)}"
+            )
+
+    async def _step_post_hooks(self) -> None:
+        """Execute all loaded ``post_scaffold`` plugin hooks."""
+        if self._plugin_manager is None:
+            return
+        errors = await self._plugin_manager.execute_post_scaffold(
+            self.project_path,
+            self.env_config,
+        )
+        if errors:
+            raise PresetError(
+                f"Post-scaffold hook(s) failed: {'; '.join(str(e) for e in errors)}"
+            )
 
     async def _step_uv_sync(self) -> None:
         """Run ``uv sync`` to lock the environment with live progress."""
