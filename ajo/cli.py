@@ -1379,6 +1379,34 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scan_parser.set_defaults(command="scan")
 
+    # ``ajo report [--output <file>] [--clipboard] [--stdout]`` — diagnostic
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Generate a comprehensive diagnostic report",
+        description="Generate a shareable diagnostic report containing OS, "
+        "Python, ajo, terminal, config (secrets redacted), Django project "
+        "info, and update status.",
+    )
+    report_output_group = report_parser.add_mutually_exclusive_group()
+    report_output_group.add_argument(
+        "--stdout",
+        action="store_true",
+        help="Print report to stdout (default behaviour)",
+    )
+    report_output_group.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        metavar="FILE",
+        help="Save report to a file (.json or .md extension)",
+    )
+    report_parser.add_argument(
+        "--clipboard",
+        action="store_true",
+        help="Copy report to the system clipboard (requires pyperclip)",
+    )
+    report_parser.set_defaults(command="report")
+
     parser.add_argument(
         "--version",
         action="store_true",
@@ -1901,6 +1929,10 @@ async def _async_main() -> int:
             from ajo.commands.scan import run as run_scan
 
             return run_scan(args)
+        if args.command == "report":
+            from ajo.commands.report import run as run_report
+
+            return run_report(args)
         # Unknown subcommand — should not happen with argparse, but safeguard
         console.print(f"[bold red]Error:[/] Unknown command: {args.command}")
         return 2
