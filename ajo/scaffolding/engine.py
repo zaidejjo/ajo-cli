@@ -136,6 +136,8 @@ class ScaffoldEngine:
         self,
         preset: Any | None = None,
         addons: list[AbstractAddon] | None = None,
+        *,
+        dry_run: bool = False,
     ) -> bool:
         """Run the full scaffold pipeline atomically.
 
@@ -156,12 +158,16 @@ class ScaffoldEngine:
 
         If any step fails, all completed steps are rolled back.
 
+        When *dry_run* is ``True``, no filesystem changes are made; each step
+        is logged at INFO level and the method returns ``True`` immediately.
+
         Args:
             preset: An optional :class:`~ajo.presets.base.AbstractPreset`
                 instance whose ``scaffold()``, ``dependencies``, and
                 ``dev_dependencies`` will be used.
             addons: An optional list of :class:`~ajo.presets.addons.AbstractAddon`
                 instances to layer on top of the preset.
+            dry_run: If ``True``, log planned steps but do not execute them.
 
         Returns:
             ``True`` if the scaffold completed successfully, ``False``
@@ -240,6 +246,12 @@ class ScaffoldEngine:
             )
 
         steps.append(("Running uv sync", self._step_uv_sync))
+
+        # ── Dry-run: log steps and return without making changes ──────
+        if dry_run:
+            for description, _ in steps:
+                logger.info("[DRY RUN] %s", description)
+            return True
 
         # ── Install SIGINT handler ───────────────────────────────────
         original_handler: Any = None

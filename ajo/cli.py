@@ -1405,6 +1405,13 @@ def build_parser() -> argparse.ArgumentParser:
         dest="no_addons",
         help="Skip all add-on modules",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        default=False,
+        help="Preview planned files and steps without making any changes",
+    )
     # ── Colour / ANSI control ────────────────────────────────────────────
     parser.add_argument(
         "--no-color",
@@ -1442,6 +1449,99 @@ def build_parser() -> argparse.ArgumentParser:
 # =============================================================================
 # HEADLESS EXECUTION
 # =============================================================================
+
+
+def _show_dry_run_plan(
+    engine: Any,
+    preset: Any,
+    addons: list[Any] | None,
+    preset_key: str,
+    database: str,
+    project_name: str,
+    project_path: Path,
+) -> int:
+    """Print the scaffold plan without making any changes.
+
+    Lists the steps that would be executed and the files that would be
+    created.  Called when ``--dry-run`` is passed.
+    """
+    # Standard step descriptions (mirrors ScaffoldEngine.execute logic)
+    steps: list[str] = [
+        "Creating project directory",
+        "Creating .env file",
+        "Creating .gitignore",
+    ]
+
+    preset_name = getattr(preset, "name", preset_key)
+    deps = getattr(preset, "dependencies", [])
+    if deps:
+        steps.append(f"Installing dependencies ({' '.join(deps)})")
+    dev_deps = getattr(preset, "dev_dependencies", [])
+    if dev_deps:
+        steps.append(f"Installing dev dependencies ({' '.join(dev_deps)})")
+
+    steps.extend(
+        [
+            "Initialising git repository",
+            "Initialising uv project",
+            f"Running {preset_name} preset",
+        ]
+    )
+
+    if addons:
+        addon_deps: list[str] = []
+        addon_dev_deps: list[str] = []
+        for a in addons:
+            addon_deps.extend(getattr(a, "dependencies", []))
+            addon_dev_deps.extend(getattr(a, "dev_dependencies", []))
+        if addon_deps:
+            steps.append(f"Installing add-on dependencies ({' '.join(addon_deps)})")
+        if addon_dev_deps:
+            steps.append(
+                f"Installing add-on dev dependencies ({' '.join(addon_dev_deps)})"
+            )
+        steps.append("Applying add-on modules")
+
+    steps.append("Running uv sync")
+
+    # ── Render output ────────────────────────────────────────────────────
+    bullet = icon("bullet")
+
+    console.print()
+    print_rule("DRY RUN — No changes will be made", style=Theme.WARNING)
+    console.print()
+    console.print(f"  [bold {Theme.PRIMARY}]{project_name}[/]")
+    console.print(
+        f"  [dim {Theme.MUTED}]Preset: {preset_key} | Database: {database}[/]"
+    )
+    if addons:
+        console.print(
+            f"  [dim {Theme.MUTED}]Add-ons: {', '.join(a.name for a in addons)}[/]"
+        )
+    console.print()
+
+    console.print(f"  [bold {Theme.SECONDARY}]Steps that would be executed:[/]")
+    for step in steps:
+        console.print(f"    {bullet} [{Theme.SUCCESS}]{step}[/]")
+    console.print()
+
+    # Preview files
+    preview = engine.get_preview_files()
+    if preview:
+        console.print(f"  [bold {Theme.SECONDARY}]Files that would be created:[/]")
+        for path, size in preview:
+            if size:
+                console.print(f"    {bullet} [dim]{path}[/] ({size} bytes)")
+            else:
+                console.print(f"    {bullet} [dim]{path}/[/]")
+        console.print()
+
+    console.print(
+        f"  [italic dim {Theme.MUTED}]Pass --dry-run to preview without making changes.[/]"
+    )
+    console.print()
+
+    return 0
 
 
 async def _headless_execute(args: argparse.Namespace) -> int:
@@ -1546,19 +1646,33 @@ async def _headless_execute(args: argparse.Namespace) -> int:
 
     # 6. Execution
     project_path = args.output_dir / project_name
-    console.print(
-        f"\n[bold {Theme.PRIMARY}]Starting headless scaffold for '{project_name}'...[/]"
-    )
-    console.print(f"  Preset: {preset_key} | Database: {args.database}")
-    if addons:
-        console.print(f"  Add-ons: {', '.join(a.name for a in addons)}")
-    console.print()
 
     try:
         preset_cls = get_preset(preset_key)
         preset_instance = preset_cls()
 
         engine = ScaffoldEngine(project_path, env_config=env_config)
+
+        # ── Dry-run: show planned steps and preview files ────────────────
+        if args.dry_run:
+            return _show_dry_run_plan(
+                engine,
+                preset_instance,
+                addons,
+                preset_key,
+                args.database,
+                project_name,
+                project_path,
+            )
+
+        console.print(
+            f"\n[bold {Theme.PRIMARY}]Starting headless scaffold for '{project_name}'...[/]"
+        )
+        console.print(f"  Preset: {preset_key} | Database: {args.database}")
+        if addons:
+            console.print(f"  Add-ons: {', '.join(a.name for a in addons)}")
+        console.print()
+
         success = await engine.execute(preset=preset_instance, addons=addons)
 
         if not success:
