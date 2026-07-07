@@ -100,8 +100,26 @@ def _load_hook_callable(
         )
         return None
 
+    # Resolve the plugin directory to an absolute path for safety checks
+    resolved_plugin_dir = plugin_dir.resolve()
+
     # Build the absolute file path for the module
-    module_file = plugin_dir / f"{module_path}.py"
+    module_file = (resolved_plugin_dir / f"{module_path}.py").resolve()
+
+    # ── Path traversal guard ─────────────────────────────────────────────
+    # Ensure the resolved module file is within the plugin directory.
+    # A malicious entry_point with ``../../tmp/evil`` would be caught here.
+    try:
+        module_file.relative_to(resolved_plugin_dir)
+    except ValueError:
+        logger.warning(
+            "Plugin %r: entry_point %r resolves outside plugin directory "
+            "(traversal attempt?) — refusing to load",
+            manifest.name,
+            manifest.entry_point,
+        )
+        return None
+
     if not module_file.is_file():
         logger.warning(
             "Plugin %r: entry_point module file %r not found",

@@ -105,6 +105,24 @@ def run(project_path, env_config):
         assert HookType.PRE_SCAFFOLD in registry
         assert HookType.POST_SCAFFOLD in registry
 
+    def test_entry_point_path_traversal_is_rejected(self, tmp_path: Path) -> None:
+        """Entry points with ``../`` that escape the plugin dir are rejected."""
+        plugin_dir = tmp_path / "myplugin"
+        plugin_dir.mkdir()
+        # Create a file outside the plugin directory
+        outside_file = tmp_path / "malicious.py"
+        outside_file.write_text("def pre_scaffold(project_path, env_config): pass\n")
+
+        manifest = PluginManifest(
+            name="myplugin",
+            version="1.0.0",
+            description="",
+            hooks=["pre_scaffold"],
+            entry_point="../malicious:pre_scaffold",
+            path=plugin_dir,
+        )
+        assert _load_hook_callable(manifest) is None
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # PluginManager

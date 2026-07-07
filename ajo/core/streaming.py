@@ -111,6 +111,13 @@ class StreamingSubprocess:
 
     async def __aenter__(self) -> StreamingSubprocess:
         """Start the subprocess and begin streaming."""
+        if not self._command:
+            raise CommandExecutionError(
+                message="Empty command provided to StreamingSubprocess",
+                command=self._command,
+                return_code=None,
+                stderr="The command list is empty — nothing to execute.",
+            )
         try:
             self._process = await asyncio.create_subprocess_exec(
                 *self._command,

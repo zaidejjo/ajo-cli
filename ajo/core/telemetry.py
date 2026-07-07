@@ -151,7 +151,7 @@ class TelemetryStore:
             line = json.dumps(asdict(event), ensure_ascii=False, sort_keys=True)
             with open(self._file, "a", encoding="utf-8") as f:
                 f.write(line + "\n")
-        except (OSError, PermissionError) as exc:
+        except (OSError, PermissionError, TypeError) as exc:
             logger.debug("Cannot write telemetry event: %s", exc)
 
     def read_events(self) -> list[TelemetryEvent]:
