@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./logo.png" width="140" alt="AJO CLI Logo">
+  <img src="https://github.com/zaidejjo/ajo-cli/blob/main/web/images/logo-removebg-preview.png" width="140" alt="AJO CLI Logo">
 </p>
 
 <h1 align="center">AJO</h1>
@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="#english">🇺🇸 English</a> · <a href="#العربية">🇸🇦 العربية</a>
+  <a href="#english-section">English</a> · <a href="#arabic-section">العربية</a>
 </p>
 
 <p align="center">
@@ -24,13 +24,12 @@
 
 ## English
 
+<div id="english-section"></div>
+
 **AJO** is an interactive CLI tool that generates production-ready Django projects with a beautiful cyberpunk-themed terminal UI. Pick your architecture, database, and add-on modules — ajo handles the rest.
 
-```bash
-ajo       # Interactive mode
-ajo --headless --name myproject -p rest-api -d postgresql
-```
 
+<!-- 
 ### ✨ Features
 
 | | Feature | |
@@ -45,8 +44,9 @@ ajo --headless --name myproject -p rest-api -d postgresql
 | **Bootstrap 5 Themes** — Pre-built UI themes | 🛠️ |
 | **Django Shell Plus** — Enhanced shell | 🔍 |
 | **Debug Toolbar** — Dev debugging tools | 🐙 |
+-->
 
-### 🚀 Installation
+### Installation
 
 #### Recommended (One-liner Scripts)
 
@@ -78,25 +78,17 @@ pipx install ajo-cli
 # Using pip (global)
 pip install ajo-cli
 ```
-
-#### AUR (Arch Linux)
-
-```bash
-yay -S ajo-cli
-# or
-paru -S ajo-cli
-```
-
 #### From Source
 
 ```bash
 git clone https://github.com/zaidejjo/ajo-cli.git
 cd ajo-cli
 uv sync
+uv tool install .
 ajo --version
 ```
 
-### 🏗️ Architecture Presets
+### Architecture Presets
 
 Choose the foundation that fits your stack:
 
@@ -116,7 +108,7 @@ Each preset generates a complete Django project with:
 
 The REST API, Ninja API, and GraphQL API presets are **model-aware** — they auto-generate serializers, viewsets, routers, and API endpoints by scanning your Django models via AST analysis.
 
-### 🧩 Add-on Modules
+### Add-on Modules
 
 Layer optional features on top of any preset:
 
@@ -133,7 +125,7 @@ Select add-ons interactively with `<space>` during the scaffold flow, or pass th
 ajo --addons auth cache testing
 ```
 
-### 🎨 Themes
+### Themes
 
 AJO ships with three visual themes. Pass `--theme` to switch:
 
@@ -146,7 +138,7 @@ ajo --theme mono               # Alias for monochromatic
 
 Themes are applied to both the Rich terminal output and all InquirerPy interactive prompts. Terminal colour depth (TrueColor, 256, 16) is auto-detected.
 
-### ⚡ Quickstart
+### Quickstart
 
 #### Create a new Django project (interactive)
 
@@ -187,7 +179,7 @@ ajo --headless --name myproject \
 | `--theme` | `cyberpunk` | Visual theme |
 | `--headless` | — | Non-interactive mode |
 
-### 🤖 Smart CLI — Manage Existing Projects
+### Smart CLI — Manage Existing Projects
 
 Run `ajo` inside an existing Django project directory:
 
@@ -213,7 +205,7 @@ AJO detects your Django project and presents a **context-aware menu** of command
 
 The smart menu also shows a **live dashboard** with project metadata, branch, virtualenv status, server status, migration state, and Ruff lint status — all updating in real time.
 
-### 🩺 Diagnostics
+### Diagnostics
 
 AJO includes a self-healing diagnostic engine that scans your Django project for common issues and offers **one-click auto-fixes**:
 
@@ -228,7 +220,7 @@ AJO includes a self-healing diagnostic engine that scans your Django project for
 
 Run diagnostics from the smart CLI menu or directly.
 
-### 🐳 Docker
+### Docker
 
 The **Docker preset** generates a production-ready container setup:
 
@@ -243,7 +235,7 @@ Creates:
 
 Optionally integrates with Celery worker.
 
-### ⚙️ Persistent Configuration
+### Persistent Configuration
 
 On the first interactive run, AJO asks:
 
@@ -271,7 +263,7 @@ Your answer is saved to `~/.config/ajo/config.json`:
 3. Auto-detection (terminal emulator heuristics)
 4. Default: text fallbacks
 
-### 🛠️ Development
+### Development
 
 #### Setup
 
@@ -330,7 +322,7 @@ ajo/
 └── validators.py          # Project/app name validators + DiagnosticEngine
 ```
 
-### 📋 Requirements
+### Requirements
 
 - **Python 3.10+**
 - **uv** — the Astral Python package manager (install: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
@@ -343,8 +335,11 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
+
 ## العربية
 
+
+<div id="arabic-section"></div>
 <p dir="rtl">
 <strong>AJO</strong> هو أداة CLI تفاعلية لتوليد مشاريع Django جاهزة للإنتاج مع واجهة مستخدم طرفية (TUI) ذات طابع Cyberpunk جميل. اختر بنية مشروعك، قاعدة البيانات، والوحدات الإضافية — وسيقوم ajo بالباقي.
 </p>
@@ -354,26 +349,7 @@ ajo       # الوضع التفاعلي
 ajo --headless --name myproject -p rest-api -d postgresql
 ```
 
-### ✨ المميزات
-
-<p dir="rtl">
-
-| | الميزة | |
-|---|---|---|
-| 🗄️ | **دعم متعدد قواعد البيانات** — PostgreSQL, MySQL, SQLite | 🐙 |
-| **تكامل GitHub** — إنشاء ورفع repo تلقائي | 🔄 |
-| **CI/CD مع Ruff** — خط أنابيب GitHub Actions | 🔒 |
-| **أمان .env** — مفاتيح secrets تُولد تلقائيًا | 📦 |
-| **تطبيقات متعددة** — أنشئ أي عدد من التطبيقات | 🧪 |
-| **اختبارات** — pytest مع تغطية و factory-boy | 🐳 |
-| **دعم Docker** — Dockerfile + Compose + Redis + Mailhog | 🎨 |
-| **ثيمات Bootstrap 5** — ثيمات UI جاهزة | 🛠️ |
-| **Django Shell Plus** — shell محسّن | 🔍 |
-| **Debug Toolbar** — أدوات تصحيح للتطوير | 🐙 |
-
-</p>
-
-### 🚀 التثبيت
+### التثبيت
 
 #### الموصى به (سكريبت بنقرة واحدة)
 
