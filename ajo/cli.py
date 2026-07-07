@@ -1321,6 +1321,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     completion_parser.set_defaults(command="completion")
 
+    # ``ajo upgrade [--check]`` — self-update
+    upgrade_parser = subparsers.add_parser(
+        "upgrade",
+        help="Update ajo-cli to the latest version",
+        description="Check PyPI for a newer release and upgrade using the "
+        "appropriate package manager for your environment (uv, pipx, or pip).",
+    )
+    upgrade_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Only check for updates; do not perform the upgrade",
+    )
+    upgrade_parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompt",
+    )
+    upgrade_parser.set_defaults(command="upgrade")
+
     parser.add_argument(
         "--version",
         action="store_true",
@@ -1831,6 +1851,10 @@ async def _async_main() -> int:
                     "Run [bold]uv add shtab[/] and try again."
                 )
                 return 1
+        if args.command == "upgrade":
+            from ajo.commands.upgrade import run as run_upgrade
+
+            return run_upgrade(args)
         # Unknown subcommand — should not happen with argparse, but safeguard
         console.print(f"[bold red]Error:[/] Unknown command: {args.command}")
         return 2
@@ -1847,6 +1871,11 @@ async def _async_main() -> int:
     from ajo.core.config import ConfigManager
 
     config = ConfigManager()
+
+    # ── Background version check (non-blocking, daemon thread) ──────────
+    from ajo.core.updater import check_in_background
+
+    check_in_background(config=config._data if hasattr(config, "_data") else None)
 
     # ── First-time Nerd Font prompt (interactive only) ───────────────────
     if config.is_first_run() and not (args.headless or args.yes):
