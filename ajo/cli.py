@@ -2072,6 +2072,70 @@ async def _async_main() -> int:
         return await _headless_execute(args)
 
     # ── Interactive TUI Mode ─────────────────────────────────────────────
+    # Show the main menu BEFORE any Django detection so the user can
+    # choose any action straight away.
+    from ajo.commands.menu import show_main_menu as _show_main_menu
+
+    _menu_action = await _show_main_menu(inquirer_style=INQUIRER_STYLE)
+
+    if _menu_action is None:
+        return 130  # user pressed Ctrl+C / Esc
+    if _menu_action == "exit":
+        return 0
+
+    # ── Route non-scaffold actions to their command implementations ────
+    if _menu_action == "doctor":
+        import argparse
+
+        from ajo.commands.doctor import run as _run_doctor
+
+        return _run_doctor(argparse.Namespace(json=False))
+
+    if _menu_action == "scan":
+        import argparse
+
+        from ajo.commands.scan import run as _run_scan
+
+        return _run_scan(argparse.Namespace(json=False))
+
+    if _menu_action == "report":
+        import argparse
+
+        from ajo.commands.report import run as _run_report
+
+        return _run_report(
+            argparse.Namespace(output=None, clipboard=False, stdout=False)
+        )
+
+    if _menu_action == "upgrade":
+        import argparse
+
+        from ajo.commands.upgrade import run as _run_upgrade
+
+        return _run_upgrade(argparse.Namespace(check=False, yes=False))
+
+    if _menu_action == "changelog":
+        import argparse
+
+        from ajo.commands.changelog import run as _run_changelog
+
+        return _run_changelog(argparse.Namespace(latest=False))
+
+    if _menu_action == "completion":
+        import argparse
+
+        try:
+            from ajo.commands.completions import run as _run_completion
+
+            return _run_completion(argparse.Namespace(shell="bash"))
+        except ImportError:
+            console.print(
+                "[bold red]Error:[/] Shell completions support is not installed. "
+                "Run [bold]uv add shtab[/] and try again."
+            )
+            return 1
+
+    # ── "new_project" — fall through to the existing project flow ──────
     try:
         # ── Detect Django project once ──────────────────────────────────
         detector = DjangoProjectDetector()
