@@ -2,14 +2,13 @@
   <img src="https://github.com/zaidejjo/ajo-cli/blob/main/web/images/logo-removebg-preview.png" width="140" alt="AJO CLI Logo">
 </p>
 
-<h1 align="center">AJO</h1>
-<p align="center"><em>Professional Django Scaffolder with Cyberpunk TUI</em></p>
+<h1 align="center">ajo</h1>
+<p align="center"><em>Django Scaffolder with TUI</em></p>
 
 <p align="center">
-  <img src="https://img.shields.io/pypi/v/ajo-cli?color=%2300f2fe&style=flat-square" alt="PyPI">
-  <img src="https://img.shields.io/pypi/pyversions/ajo-cli?color=%234facfe&style=flat-square" alt="Python">
-  <img src="https://img.shields.io/aur/version/ajo-cli?color=%23f355da&style=flat-square" alt="AUR">
-  <img src="https://img.shields.io/github/license/zaidejjo/ajo-cli?color=%2300ffcc&style=flat-square" alt="License">
+  <img src="https://img.shields.io/pypi/v/ajo-cli?color=%ffffffff&style=flat-square" alt="PyPI">
+  <img src="https://img.shields.io/pypi/pyversions/ajo-cli?color=%ffffffff&style=flat-square" alt="Python">
+  <img src="https://img.shields.io/github/license/zaidejjo/ajo-cli?color=%ffffffff&style=flat-square" alt="License">
 </p>
 
 <p align="center">
@@ -17,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ajo-cli.pages.dev"><strong>🌐 Explore the Website & Web Simulator</strong></a>
+  <a href="https://ajo-cli.pages.dev"><strong>🌐 Website</strong></a>
 </p>
 
 ---
@@ -48,9 +47,9 @@
 
 ### Installation
 
-#### Recommended (One-liner Scripts)
+#### Recommended
 
-The fastest way to install AJO on any platform.
+The fastest way to install ajo on any platform.
 
 **macOS / Linux**
 
