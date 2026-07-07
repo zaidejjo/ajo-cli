@@ -202,3 +202,12 @@ class TestRun:
         args.command = "doctor"
         result = run(args)
         assert isinstance(result, int)
+
+
+def test_self_check_is_alias_for_doctor() -> None:
+    """``ajo self-check`` routes to ``command="doctor"`` via argparse."""
+    from ajo.cli import build_parser  # noqa: PLC0415
+
+    parser = build_parser()
+    args = parser.parse_args(["self-check"])
+    assert args.command == "doctor"

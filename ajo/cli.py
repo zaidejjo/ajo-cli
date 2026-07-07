@@ -1307,6 +1307,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     doctor_parser.set_defaults(command="doctor")
 
+    # ``ajo self-check`` — alias for ``ajo doctor``
+    self_check_parser = subparsers.add_parser(
+        "self-check",
+        help="System health check (alias for doctor)",
+        description="Alias for ``ajo doctor`` — check system prerequisites, "
+        "configuration, and terminal capabilities.",
+    )
+    self_check_parser.set_defaults(command="doctor")
+
     # ``ajo completion <shell>`` — generate shell completions (placeholder)
     completion_parser = subparsers.add_parser(
         "completion",
@@ -1354,6 +1363,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show only the most recent entry / release",
     )
     changelog_parser.set_defaults(command="changelog")
+
+    # ``ajo scan [--json]`` — project health card
+    scan_parser = subparsers.add_parser(
+        "scan",
+        help="Display a project health card",
+        description="Inspect the current Django project and display a "
+        "formatted summary including Django version, model count, "
+        "installed apps, middleware, URL patterns, and environment context.",
+    )
+    scan_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON instead of a formatted health card",
+    )
+    scan_parser.set_defaults(command="scan")
 
     parser.add_argument(
         "--version",
@@ -1873,6 +1897,10 @@ async def _async_main() -> int:
             from ajo.commands.changelog import run as run_changelog
 
             return run_changelog(args)
+        if args.command == "scan":
+            from ajo.commands.scan import run as run_scan
+
+            return run_scan(args)
         # Unknown subcommand — should not happen with argparse, but safeguard
         console.print(f"[bold red]Error:[/] Unknown command: {args.command}")
         return 2
