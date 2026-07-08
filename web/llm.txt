@@ -1,0 +1,64 @@
+# AJO CLI — Django Scaffolder
+
+> AJO is a CLI tool that scaffolds production-ready Django projects in seconds. Pick a preset architecture, layer add-on modules, and walk away with a deployable repo.
+
+## Quick Start
+
+```bash
+# Install with uv (recommended)
+uv tool install ajo-cli
+
+# Or with pip
+pip install ajo-cli
+
+# Verify
+ajo --version
+```
+
+## Architecture Presets
+
+1. **Standard Monolith** — Django + Bootstrap 5 + HTMX for classic full-stack apps.
+2. **REST API Ready** — DRF + JWT auth + CORS + auto-generated Swagger/OpenAPI docs.
+3. **Ninja API** — django-ninja + Pydantic for type-safe, high-throughput APIs.
+4. **GraphQL API** — Graphene + Relay with pre-configured GraphiQL IDE.
+5. **Docker Stack** — Multi-stage Dockerfile + docker-compose (Postgres, Redis, Mailhog).
+
+## Add-on Modules
+
+| Module                    | Flag          | Description                                    |
+| ------------------------- | ------------- | ---------------------------------------------- |
+| Auth & Users              | `--auth`      | SimpleJWT, custom User model, registration      |
+| Caching & Performance     | `--cache`     | django-redis, connection pooling, debug toolbar |
+| Security Hardening        | `--security`  | django-axes, TOTP 2FA, CSP/HSTS/XSS hardening    |
+| Testing Infrastructure      | `--testing`  | pytest, coverage 80%, factory-boy, auto-generated tests |
+
+## Installation by Platform
+
+### Linux & macOS
+```bash
+curl -fsSL https://ajo-cli.pages.dev/install | sh
+```
+
+### Windows (PowerShell)
+```powershell
+iwr -useb https://ajo-cli.pages.dev/install.ps1 | iex
+```
+
+## Requirements
+
+- Python 3.8+
+- pip or uv
+- Git (for plugin discovery)
+
+## Key Features
+
+- **Model-Aware Scaffolding**: AJO scans Django models via AST and auto-generates serializers, viewsets, routers, and endpoints — zero boilerplate.
+- **Diagnostics Engine**: Run `ajo doctor` inside any Django project to get a live dashboard, detect misconfigurations, and apply one-click fixes.
+- **Context-Aware Commands**: Surfaces urgent actions (superuser creation, pending migrations) based on actual project state.
+
+## Links
+
+- GitHub: https://github.com/zaidejjo/ajo-cli
+- Docs: https://github.com/zaidejjo/ajo-cli/blob/main/README.md
+- Install script: https://ajo-cli.pages.dev/install.sh
+- Author: https://zaidejjo.github.io/
