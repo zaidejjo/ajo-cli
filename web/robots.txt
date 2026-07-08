@@ -1,0 +1,7 @@
+# robots.txt for ajo-cli.pages.dev
+# Allow all crawlers full access
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://ajo-cli.pages.dev/sitemap.xml
